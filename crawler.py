@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-from db import get_db_connection, save_boardgame_to_db, update_korean_names, update_boardgame_partial
+from db import get_db_connection, save_boardgame_to_db, update_boardgame_partial
 import re
 import time
 
@@ -103,83 +103,6 @@ def fetch_bgg_api(game_id):
         print(f"[API 파싱 실패] {game_id} / {e}")
         return None
 
-def update_missing_data():
-    """기존 데이터에서 누락된 정보(이미지, 한글 제목, 평점, 추천 인원)를 업데이트하는 함수"""
-    conn = get_db_connection()
-    c = conn.cursor()
-    
-    # 이미지, 한글 제목, 평점, 또는 추천 인원이 없는 게임들 찾기
-    c.execute('''
-        SELECT bgg_id, name, korean_name, main_image_url, rating, players_recommended
-        FROM boardgames 
-        WHERE main_image_url IS NULL OR main_image_url = '' 
-           OR korean_name IS NULL OR korean_name = ''
-           OR rating IS NULL OR rating = 0
-           OR players_recommended IS NULL OR players_recommended = ''
-    ''')
-    games_to_update = c.fetchall()
-    conn.close()
-    
-    if not games_to_update:
-        print("업데이트할 게임이 없습니다.")
-        return
-    
-    print(f"누락된 데이터 업데이트 대상: {len(games_to_update)}개 게임")
-    
-    updated_count = 0
-    failed_count = 0
-    
-    for bgg_id, name, korean_name, image_url, current_rating, current_recommended in games_to_update:
-        print(f"[데이터 업데이트] {name} (ID: {bgg_id})")
-        print(f"  - 현재 한글 제목: {korean_name or '없음'}")
-        print(f"  - 현재 이미지: {'있음' if image_url else '없음'}")
-        print(f"  - 현재 평점: {current_rating or '없음'}")
-        print(f"  - 현재 추천 인원: {current_recommended or '없음'}")
-        
-        game = fetch_bgg_api(str(bgg_id))
-        if game:
-            # 기존 데이터와 병합
-            updated_game = {
-                "bgg_id": bgg_id,
-                "name": game.get('name', name),
-                "korean_name": game.get('korean_name') or korean_name,
-                "main_image_url": game.get('main_image_url') or image_url,
-                "players_min": game.get('players_min'),
-                "players_max": game.get('players_max'),
-                "players_best": game.get('players_best'),
-                "players_recommended": game.get('players_recommended') or current_recommended,
-                "play_time_min": game.get('play_time_min'),
-                "play_time_max": game.get('play_time_max'),
-                "age": game.get('age'),
-                "weight": game.get('weight'),
-                "rating": game.get('rating'),
-                "type": game.get('type'),
-                "category": game.get('category'),
-                "mechanism": game.get('mechanism'),
-                "url": game.get('url')
-            }
-            
-            save_boardgame_to_db(updated_game)
-            
-            # 업데이트된 정보 출력
-            if game.get('korean_name') and not korean_name:
-                print(f"  ✓ 한글 제목 추가: {game['korean_name']}")
-            if game.get('main_image_url') and not image_url:
-                print(f"  ✓ 이미지 추가: {game['main_image_url'][:50]}...")
-            if game.get('rating') and (not current_rating or current_rating == 0):
-                print(f"  ✓ 평점 업데이트: {game['rating']}")
-            if game.get('players_recommended') and not current_recommended:
-                print(f"  ✓ 추천 인원 추가: {game['players_recommended']}")
-            
-            updated_count += 1
-        else:
-            print(f"  ✗ 크롤링 실패")
-            failed_count += 1
-        
-        time.sleep(0.3)  # API 호출 간격 조절
-    
-    print(f"데이터 업데이트 완료: {updated_count}개 성공, {failed_count}개 실패")
-
 def crawl_all_pages():
     """첫 페이지부터 순차적으로 크롤링하는 함수"""
     page = 1
@@ -217,7 +140,7 @@ def crawl_all_pages():
                 # 기존 데이터 확인
                 conn = get_db_connection()
                 c = conn.cursor()
-                c.execute('SELECT bgg_id, name, korean_name, main_image_url, rating, players_recommended FROM boardgames WHERE bgg_id = ?', [game_id])
+                c.execute('SELECT bgg_id FROM boardgames WHERE bgg_id = ?', [game_id])
                 existing_game = c.fetchone()
                 conn.close()
                 
@@ -235,24 +158,8 @@ def crawl_all_pages():
                     if existing_game:
                         # 기존 데이터가 있으면 부분 업데이트 (즐겨찾기 등 유지)
                         update_boardgame_partial(game)
-                        
-                        # 업데이트된 정보 출력
-                        bgg_id, name, korean_name, image_url, current_rating, current_recommended = existing_game
-                        updated_fields = []
-                        if game.get('korean_name') and not korean_name:
-                            updated_fields.append("한글 제목")
-                        if game.get('main_image_url') and not image_url:
-                            updated_fields.append("이미지")
-                        if game.get('rating') and (not current_rating or current_rating == 0):
-                            updated_fields.append("평점")
-                        if game.get('players_recommended') and not current_recommended:
-                            updated_fields.append("추천 인원")
-                        
-                        if updated_fields:
-                            print(f"  ✓ 업데이트: {', '.join(updated_fields)}")
-                            updated_games += 1
-                        else:
-                            print(f"  - 업데이트 없음")
+                        print(f"  ✓ 업데이트: {game['name']}")
+                        updated_games += 1
                     else:
                         # 새로운 게임이면 전체 저장
                         save_boardgame_to_db(game)
@@ -279,11 +186,5 @@ if __name__ == "__main__":
     init_db()
     
     print("=== 보드게임 크롤링 시작 ===")
-    print("1. 전체 페이지 크롤링")
     crawl_all_pages()
-    
-    print("\n=== 누락된 데이터 업데이트 ===")
-    print("2. 누락된 데이터 업데이트")
-    update_missing_data()
-    
     print("\n=== 크롤링 완료 ===") 
