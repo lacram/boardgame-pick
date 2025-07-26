@@ -2,14 +2,14 @@
   "version": 2,
   "builds": [
     {
-      "src": "boardgame-pick-node/server.js",
+      "src": "server.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "/boardgame-pick-node/server.js"
+      "dest": "/server.js"
     }
   ],
   "env": {
