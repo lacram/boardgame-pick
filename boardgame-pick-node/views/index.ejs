@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boardgame Pick</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            color: #1976d2;
+            margin-bottom: 8px;
+            font-size: 24px;
+        }
+        
+        .header p {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .search-form {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+        
+        .search-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .search-input {
+            flex: 1;
+            min-width: 120px;
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .search-button {
+            background: #1976d2;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        
+        .search-button:hover {
+            background: #1565c0;
+        }
+        
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+        }
+        
+        /* 모바일 최적화된 그리드 */
+        .game-grid {
+            display: grid;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        /* 데스크톱: 4개씩 */
+        @media (min-width: 1200px) {
+            .game-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        
+        /* 태블릿: 3개씩 */
+        @media (min-width: 768px) and (max-width: 1199px) {
+            .game-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        
+        /* 모바일: 3개씩 (요청사항) */
+        @media (max-width: 767px) {
+            .game-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+            
+            .search-row {
+                flex-direction: column;
+                gap: 6px;
+            }
+            
+            .search-input {
+                min-width: auto;
+            }
+        }
+        
+        /* 매우 작은 화면: 2개씩 */
+        @media (max-width: 480px) {
+            .game-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
+            }
+        }
+        
+        .game-card {
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.2s;
+            min-height: 200px;
+        }
+        
+        .game-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+        
+        .game-image {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+        }
+        
+        .game-content {
+            padding: 10px;
+        }
+        
+        .game-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #1976d2;
+            margin-bottom: 6px;
+            text-decoration: none;
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .game-title:hover {
+            text-decoration: underline;
+        }
+        
+        .game-info {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 3px;
+            line-height: 1.2;
+        }
+        
+        .favorite-button {
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            color: #bbb;
+            transition: color 0.2s;
+            padding: 2px;
+        }
+        
+        .favorite-button.active {
+            color: #FFD600;
+        }
+        
+        .favorite-button:hover {
+            color: #FFD600;
+        }
+        
+        .rating-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+        }
+        
+        .modal-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        .rating-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+        
+        .modal-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .modal-button.primary {
+            background: #1976d2;
+            color: white;
+        }
+        
+        .modal-button.secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .page-button {
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            background: white;
+            color: #333;
+            text-decoration: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            min-width: 32px;
+            text-align: center;
+        }
+        
+        .page-button.active {
+            background: #1976d2;
+            color: white;
+            border-color: #1976d2;
+        }
+        
+        .page-button:hover {
+            background: #f5f5f5;
+        }
+        
+        .page-button.active:hover {
+            background: #1565c0;
+        }
+        
+        .stats {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .rating-button {
+            margin-left: 5px;
+            padding: 2px 6px;
+            background: #1976d2;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+        }
+        
+        /* 모바일에서 버튼 크기 조정 */
+        @media (max-width: 767px) {
+            .page-button {
+                padding: 8px 12px;
+                font-size: 16px;
+                min-width: 40px;
+            }
+            
+            .rating-button {
+                font-size: 11px;
+                padding: 3px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Boardgame Pick</h1>
+            <p>모바일 완벽 호환 보드게임 리스트</p>
+        </div>
+
+        <!-- 검색 폼 -->
+        <form class="search-form" method="GET">
+            <div class="search-row">
+                <input type="text" name="search" placeholder="게임명 검색" 
+                       value="<%= search %>" class="search-input">
+                <input type="text" name="searchPlayers" placeholder="인원" 
+                       value="<%= searchPlayers %>" class="search-input">
+                <input type="text" name="searchBest" placeholder="베스트" 
+                       value="<%= searchBest %>" class="search-input">
+            </div>
+            <div class="search-row">
+                <div class="checkbox-container">
+                    <input type="checkbox" name="showFavoritesOnly" id="favorites" 
+                           <%= showFavoritesOnly ? 'checked' : '' %>>
+                    <label for="favorites">즐겨찾기만</label>
+                </div>
+                <button type="submit" class="search-button">검색</button>
+            </div>
+        </form>
+
+        <!-- 통계 -->
+        <div class="stats">
+            총 <%= total %>개 결과 | <%= currentPage %> / <%= totalPages %> 페이지
+        </div>
+
+        <!-- 게임 그리드 -->
+        <div class="game-grid">
+            <% games.forEach(function(game) { %>
+                <div class="game-card">
+                    <% if (game.main_image_url) { %>
+                        <img src="<%= game.main_image_url %>" alt="<%= game.name %>" class="game-image">
+                    <% } %>
+                    <div class="game-content">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <a href="<%= game.url %>" target="_blank" class="game-title"><%= game.name %></a>
+                            <button class="favorite-button <%= game.is_favorite ? 'active' : '' %>" 
+                                    onclick="toggleFavorite(<%= game.rowid %>, <%= game.is_favorite ? 1 : 0 %>)">
+                                <%= game.is_favorite ? '★' : '☆' %>
+                            </button>
+                        </div>
+                        <div class="game-info"><%= game.players_min %>~<%= game.players_max %>명 
+                            <% if (game.players_best) { %>| <%= game.players_best %>명<% } %></div>
+                        <div class="game-info"><%= game.play_time_min || 0 %>~<%= game.play_time_max || 0 %>분 
+                            | 난이도: <%= game.weight || 0 %></div>
+                        <div class="game-info">평점: <%= game.rating || 0 %> 
+                            | 내평점: <%= game.myRating || '-' %>
+                            <button onclick="openRatingModal(<%= game.bgg_id %>, '<%= game.name %>')" 
+                                    class="rating-button">
+                                평점
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+
+        <!-- 페이지네이션 -->
+        <% if (totalPages > 1) { %>
+            <div class="pagination">
+                <% if (currentPage > 1) { %>
+                    <a href="?page=<%= currentPage - 1 %>&search=<%= search %>&searchPlayers=<%= searchPlayers %>&searchBest=<%= searchBest %>&showFavoritesOnly=<%= showFavoritesOnly ? 'on' : '' %>" 
+                       class="page-button">이전</a>
+                <% } %>
+                
+                <% for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) { %>
+                    <a href="?page=<%= i %>&search=<%= search %>&searchPlayers=<%= searchPlayers %>&searchBest=<%= searchBest %>&showFavoritesOnly=<%= showFavoritesOnly ? 'on' : '' %>" 
+                       class="page-button <%= i === currentPage ? 'active' : '' %>"><%= i %></a>
+                <% } %>
+                
+                <% if (currentPage < totalPages) { %>
+                    <a href="?page=<%= currentPage + 1 %>&search=<%= search %>&searchPlayers=<%= searchPlayers %>&searchBest=<%= searchBest %>&showFavoritesOnly=<%= showFavoritesOnly ? 'on' : '' %>" 
+                       class="page-button">다음</a>
+                <% } %>
+            </div>
+        <% } %>
+    </div>
+
+    <!-- 평점 입력 모달 -->
+    <div id="ratingModal" class="rating-modal">
+        <div class="modal-content">
+            <div class="modal-title">내 평점 남기기</div>
+            <input type="number" id="ratingInput" min="1" max="10" value="10" class="rating-input" placeholder="별점 (1-10)">
+            <textarea id="reviewText" class="rating-input" placeholder="리뷰 (선택)" rows="3"></textarea>
+            <div class="modal-buttons">
+                <button class="modal-button secondary" onclick="closeRatingModal()">취소</button>
+                <button class="modal-button primary" onclick="saveRating()">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentBggId = null;
+        let currentGameName = null;
+
+        function toggleFavorite(rowId, currentFav) {
+            fetch('/toggle-favorite', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    rowId: rowId,
+                    currentFav: currentFav
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        function openRatingModal(bggId, gameName) {
+            currentBggId = bggId;
+            currentGameName = gameName;
+            document.getElementById('ratingModal').style.display = 'block';
+        }
+
+        function closeRatingModal() {
+            document.getElementById('ratingModal').style.display = 'none';
+        }
+
+        function saveRating() {
+            const rating = document.getElementById('ratingInput').value;
+            const text = document.getElementById('reviewText').value;
+
+            fetch('/add-review', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    bggId: currentBggId,
+                    rating: parseInt(rating),
+                    text: text
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    closeRatingModal();
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        // 모달 외부 클릭시 닫기
+        document.getElementById('ratingModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeRatingModal();
+            }
+        });
+    </script>
+</body>
+</html> 

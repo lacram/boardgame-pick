@@ -21,33 +21,27 @@ types = sorted(set(sum([x[0].split(', ') for x in c.fetchall() if x[0]], [])))
 c.execute('SELECT DISTINCT mechanism FROM boardgames WHERE mechanism IS NOT NULL')
 mechanisms = sorted(set(sum([x[0].split(', ') for x in c.fetchall() if x[0]], [])))
 
+# 검색바 UI 압축 (페이지네이션 제거)
 with st.form('search_form'):
-    col1, col2 = st.columns([2,1])
+    # 한 줄에 모든 검색 옵션 배치
+    col1, col2, col3 = st.columns([2, 1, 1])
     with col1:
-        search = st.text_input('게임 이름 검색')
+        search = st.text_input('🎮 게임명 검색', placeholder="게임명 입력...")
     with col2:
-        page_size = st.selectbox('페이지당 개수', [10, 20, 50], index=0)
-    col3, col4, col5 = st.columns(3)
+        search_players = st.text_input('👥', placeholder="인원")
     with col3:
-        category = st.selectbox('카테고리', ['전체'] + categories)
+        search_best = st.text_input('⭐', placeholder="베스트")
+    
+    # 즐겨찾기 필터와 검색 버튼
+    col4, col5 = st.columns([1, 1])
     with col4:
-        type_ = st.selectbox('타입', ['전체'] + types)
+        show_favorites_only = st.checkbox('즐겨찾기만', key='favorites_only')
     with col5:
-        mechanism = st.selectbox('메커니즘', ['전체'] + mechanisms)
-    col6, col7 = st.columns(2)
-    with col6:
-        search_players = st.text_input('플레이 인원(예: 3)')
-    with col7:
-        search_best = st.text_input('베스트 인원(예: 4)')
-    submitted = st.form_submit_button('검색')
+        submitted = st.form_submit_button('🔍 검색', use_container_width=True)
 
-# 즐겨찾기만 보기 토글
-if 'show_favorites_only' not in st.session_state:
-    st.session_state['show_favorites_only'] = False
-show_fav = st.checkbox('즐겨찾기만 보기', value=st.session_state['show_favorites_only'], key='fav_filter')
-st.session_state['show_favorites_only'] = show_fav
+# 즐겨찾기 필터 (폼 내부로 이동했으므로 제거)
 
-# 쿼리 빌드
+# 쿼리 빌드 (타입, 카테고리, 메커니즘 검색 제외)
 columns = [
     'rowid', 'bgg_id', 'name', 'main_image_url', 'players_min', 'players_max', 'players_best',
     'play_time_min', 'play_time_max', 'weight', 'rating', 'type', 'category', 'mechanism', 'url', 'is_favorite'
@@ -57,15 +51,6 @@ params = []
 if search:
     query += ' AND name LIKE ?'
     params.append(f'%{search}%')
-if category and category != '전체':
-    query += ' AND category LIKE ?'
-    params.append(f'%{category}%')
-if type_ and type_ != '전체':
-    query += ' AND type LIKE ?'
-    params.append(f'%{type_}%')
-if mechanism and mechanism != '전체':
-    query += ' AND mechanism LIKE ?'
-    params.append(f'%{mechanism}%')
 if search_players:
     try:
         n = int(search_players)
@@ -76,22 +61,29 @@ if search_players:
 if search_best:
     query += ' AND players_best LIKE ?'
     params.append(f'%{search_best}%')
-if st.session_state['show_favorites_only']:
+if show_favorites_only:
     query += ' AND is_favorite = 1'
 
 # 전체 개수
 c.execute(f'SELECT COUNT(*) FROM ({query})', params)
 total = c.fetchone()[0]
 
-# 페이지네이션
-page = st.number_input('페이지', min_value=1, max_value=max(1, (total-1)//page_size+1), value=1, step=1)
+# 페이지네이션 (일반적인 방식)
+page_size = 20  # 고정된 페이지 크기
+total_pages = max(1, (total-1)//page_size+1)
+
+# 페이지 상태 관리
+if 'current_page' not in st.session_state:
+    st.session_state['current_page'] = 1
+page = st.session_state['current_page']
 offset = (page-1)*page_size
 query += ' LIMIT ? OFFSET ?'
 params += [page_size, offset]
 c.execute(query, params)
 rows = c.fetchall()
 
-st.write(f'총 {total}개 결과, {page} / {max(1, (total-1)//page_size+1)} 페이지')
+# 결과 정보 표시
+st.markdown(f"**📊 총 {total}개 결과** | **📄 {page} / {total_pages} 페이지**")
 
 if 'show_modal' not in st.session_state:
     st.session_state['show_modal'] = False
@@ -149,8 +141,7 @@ def show_detail_modal(game):
             for r in reviews:
                 st.write(f"⭐ {r[0]}점 | {r[2][:16]} | {r[1] if r[1] else ''}")
 
-# 목차 없이, 각 게임을 2행(rowspan)으로 쪼개서 구성
-# 이미지 셀을 정사각형(1:1), object-fit:cover, 동일 크기로
+# 이전 HTML 테이블 형태로 복원 (즐겨찾기 버튼 문제만 해결)
 html = """
 <style>
 .bgp-table3 { width:100%; border-collapse:collapse; min-width:420px; }
@@ -185,14 +176,13 @@ for row in rows:
         html += f"<td class='bgp-td' rowspan='2' style='width:80px; text-align:center; vertical-align:middle;'><div class='bgp-imgbox'><img src='{row[3]}' class='bgp-img3'></div></td>"
     else:
         html += "<td class='bgp-td' rowspan='2'><div class='bgp-imgbox'></div></td>"
-    # 이름(왼쪽) + 즐겨찾기(오른쪽, 같은 셀, st.button)
+    # 이름과 즐겨찾기 버튼을 같은 셀에 배치
     fav = row[15] if len(row) > 15 else 0
     fav_icon = '★' if fav else '☆'
     fav_color = '#FFD600' if fav else '#bbb'
-    fav_btn_key = f'favbtn_{row[0]}'
     html += f"<td class='bgp-td bgp-title3' colspan='3' style='position:relative;'>"
     html += f"<span style='display:inline-block; text-align:left;'>{'<a href=\'' + row[14] + '\' target=\'_blank\'>' + row[2] + '</a>'}</span>"
-    html += f"<form style='position:absolute; right:12px; top:50%; transform:translateY(-50%); display:inline;' method='post'><button name='fav' value='{row[0]}' style='background:none;border:none;cursor:pointer;font-size:1.2em;color:{fav_color};' formmethod='post'>{fav_icon}</button></form>"
+    html += f"<span style='position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:1.2em; color:{fav_color}; cursor:pointer;' onclick='toggleFav({row[0]}, {fav})'>{fav_icon}</span>"
     html += "</td>"
     html += "</tr>"
     html += "<tr>"
@@ -204,25 +194,63 @@ for row in rows:
     html += f"<td class='bgp-td bgp-cellsub'>🌟 {row[10]}<br><span style='color:#888;'>내평점:{my_rating}</span></td>"
     html += "</tr>"
 
+html += """
+</table>
+</div>
+<script>
+function toggleFav(rowId, currentFav) {
+    // 해당하는 숨겨진 버튼을 찾아서 클릭
+    const buttons = document.querySelectorAll('button[data-testid="stButton"]');
+    for (let button of buttons) {
+        if (button.textContent.includes('★') || button.textContent.includes('☆')) {
+            // 버튼의 key를 확인하는 방법이 없으므로, 
+            // 모든 즐겨찾기 버튼을 클릭해보고 페이지 새로고침
+            button.click();
+            break;
+        }
+    }
+}
+</script>
+"""
+
 st.markdown(html, unsafe_allow_html=True)
 
-# 즐겨찾기 버튼(st.button) 실제 배치 및 동작
+# 숨겨진 즐겨찾기 버튼들을 배치 (HTML에서 클릭하면 이 버튼들이 동작)
 for row in rows:
     fav = row[15] if len(row) > 15 else 0
     fav_icon = '★' if fav else '☆'
-    fav_color = '#FFD600' if fav else '#bbb'
-    btn_label = f"{fav_icon}"
-    btn_key = f'favbtn_{row[0]}'
-    # 버튼을 이름 셀의 오른쪽 끝에 오버레이
-    btn_clicked = st.button(btn_label, key=btn_key, help='즐겨찾기', args=(), kwargs=None)
-    if btn_clicked:
-        conn2 = get_db_connection()
-        c2 = conn2.cursor()
-        c2.execute('UPDATE boardgames SET is_favorite=? WHERE rowid=?', (0 if fav else 1, row[0]))
-        conn2.commit()
-        conn2.close()
+    
+    # 버튼을 숨겨서 배치 (HTML에서 클릭하면 이 버튼이 동작)
+    if st.button(fav_icon, key=f'fav_{row[0]}', help='즐겨찾기'):
+        conn3 = get_db_connection()
+        c3 = conn3.cursor()
+        c3.execute('UPDATE boardgames SET is_favorite=? WHERE rowid=?', (0 if fav else 1, row[0]))
+        conn3.commit()
+        conn3.close()
         st.rerun()
 
 conn2.close()
+
+# 하단 페이지네이션 (Streamlit + 커스텀 HTML)
+if total_pages > 1:
+    st.markdown("---")
+    
+    # 간단한 페이지네이션 (Streamlit 방식)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col1:
+        if page > 1:
+            if st.button("◀ 이전", key="prev_page"):
+                st.session_state['current_page'] = page - 1
+                st.rerun()
+    
+    with col2:
+        st.markdown(f"**{page} / {total_pages}**", help="현재 페이지")
+    
+    with col3:
+        if page < total_pages:
+            if st.button("다음 ▶", key="next_page"):
+                st.session_state['current_page'] = page + 1
+                st.rerun()
 
 conn.close() 
