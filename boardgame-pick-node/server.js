@@ -15,7 +15,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 // 데이터베이스 연결
-const db = new sqlite3.Database('../boardgames.db');
+const db = new sqlite3.Database(path.join(__dirname, '../boardgames.db'));
 
 // 데이터베이스 초기화
 function initDB() {
@@ -63,7 +63,7 @@ app.get('/', async (req, res) => {
 
     // 쿼리 빌드
     let query = `SELECT 
-        rowid, bgg_id, name, main_image_url, players_min, players_max, players_best,
+        rowid as rowid, bgg_id, name, main_image_url, players_min, players_max, players_best,
         play_time_min, play_time_max, weight, rating, type, category, mechanism, url, is_favorite
         FROM boardgames WHERE 1=1`;
     let params = [];
@@ -144,9 +144,9 @@ app.post('/toggle-favorite', (req, res) => {
     const newFav = currentFav ? 0 : 1;
 
     db.run('UPDATE boardgames SET is_favorite = ? WHERE rowid = ?', 
-        [newFav, rowId], (err) => {
+        [newFav, rowId], function(err) {
         if (err) {
-            console.error(err);
+            console.error('데이터베이스 에러:', err);
             return res.status(500).json({ error: 'Database error' });
         }
         res.json({ success: true, isFavorite: newFav });
