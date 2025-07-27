@@ -1,10 +1,45 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const supabase = require('./supabase-client');
 
 const app = express();
 const PORT = process.env.PORT;
+
+// 검색값이 범위에 포함되는지 확인하는 함수
+function isInRange(searchValue, rangeStr) {
+    if (!rangeStr) return false;
+    
+    const searchNum = parseInt(searchValue);
+    if (isNaN(searchNum)) return false;
+    
+    // "6-9" 형태 파싱 (하이픈, en dash, em dash 모두 지원)
+    if (rangeStr.includes('-') || rangeStr.includes('–') || rangeStr.includes('—')) {
+        // 모든 종류의 대시를 일반 하이픈으로 변환
+        const normalizedRange = rangeStr.replace(/[–—]/g, '-');
+        const parts = normalizedRange.split('-').map(s => parseInt(s.trim()));
+        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+            return searchNum >= parts[0] && searchNum <= parts[1];
+        }
+    }
+    
+    // "6|9" 형태 파싱
+    if (rangeStr.includes('|')) {
+        const parts = rangeStr.split('|').map(s => parseInt(s.trim()));
+        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+            return searchNum === parts[0] || searchNum === parts[1];
+        }
+    }
+    
+    // 단일 숫자
+    const num = parseInt(rangeStr);
+    if (!isNaN(num)) {
+        return searchNum === num;
+    }
+    
+    return false;
+}
+
+
 
 // 미들웨어 설정
 app.set('view engine', 'ejs');
@@ -13,17 +48,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// 데이터베이스 연결 (로컬에서는 SQLite, 배포에서는 Supabase)
-let db;
-let useSupabase = false;
-
-if (process.env.NODE_ENV === 'production' && process.env.SUPABASE_URL) {
-    useSupabase = true;
-    console.log('Supabase 사용');
-} else {
-    db = new sqlite3.Database(path.join(__dirname, 'boardgames.db'));
-    console.log('SQLite 사용');
-}
+// Supabase만 사용
+console.log('Supabase 사용');
 
 // 메인 페이지
 app.get('/', async (req, res) => {
@@ -34,74 +60,88 @@ app.get('/', async (req, res) => {
     const weightMin = req.query.weightMin || '';
     const weightMax = req.query.weightMax || '';
     const showFavoritesOnly = req.query.showFavoritesOnly === 'on';
-    const sortBy = req.query.sortBy || 'rating';
-    const sortOrder = req.query.sortOrder || 'desc';
-    const pageSize = 20;
+    const sortBy = req.query.sortBy || process.env.DEFAULT_SORT_BY || 'rating';
+    const sortOrder = req.query.sortOrder || process.env.DEFAULT_SORT_ORDER || 'desc';
+    const pageSize = parseInt(process.env.PAGE_SIZE) || 20;
 
     try {
         let games = [];
         let total = 0;
 
-        if (useSupabase) {
-            // Supabase 쿼리
-            let query = supabase
-                .from('boardgames')
-                .select('id, *', { count: 'exact' });
+        // Supabase 쿼리
+        let query = supabase
+            .from('boardgames')
+            .select('id, *', { count: 'exact' });
 
-            // 필터링
-            if (search) {
-                query = query.or(`name.ilike.%${search}%,korean_name.ilike.%${search}%`);
-            }
-            if (searchPlayers) {
-                // 범위 검색 지원 (예: "2-4", "3-6")
-                if (searchPlayers.includes('-')) {
-                    const [minPlayers, maxPlayers] = searchPlayers.split('-').map(s => parseInt(s.trim()));
-                    if (!isNaN(minPlayers) && !isNaN(maxPlayers)) {
-                        query = query.gte('players_recommended', minPlayers).lte('players_recommended', maxPlayers);
-                    }
-                } else {
-                    // 단일 숫자 검색 (예: "3")
-                    const playerNum = parseInt(searchPlayers);
-                    if (!isNaN(playerNum)) {
-                        query = query.eq('players_recommended', playerNum);
-                    }
+        // 필터링
+        if (search) {
+            query = query.or(`name.ilike.%${search}%,korean_name.ilike.%${search}%`);
+        }
+        // if (searchPlayers) {
+        //     // 단일 숫자 검색만 지원 (예: "8")
+        //     const playerNum = parseInt(searchPlayers);
+        //     if (!isNaN(playerNum)) {
+        //         // 단일 숫자가 포함될 수 있는 모든 데이터 가져오기
+        //         query = query.or(`players_recommended.eq.${playerNum},players_recommended.like.%-%,players_recommended.like.%|%`);
+        //     }
+        // }
+        // if (searchBest) {
+        //     // 단일 숫자 검색만 지원 (예: "8")
+        //     const bestNum = parseInt(searchBest);
+        //     if (!isNaN(bestNum)) {
+        //         // 단일 숫자가 포함될 수 있는 모든 데이터 가져오기
+        //         query = query.or(`players_best.eq.${bestNum},players_best.like.%-%,players_best.like.%|%`);
+        //     }
+        // }
+        if (weightMin) {
+            query = query.gte('weight', parseFloat(weightMin));
+        }
+        if (weightMax) {
+            query = query.lte('weight', parseFloat(weightMax));
+        }
+        if (showFavoritesOnly) {
+            query = query.eq('is_favorite', true);
+        }
+
+        // 정렬
+        const validSortFields = ['rating', 'weight', 'name'];
+        if (validSortFields.includes(sortBy)) {
+            query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+        }
+
+        // 범위 검색이 있는 경우 페이지네이션 없이 모든 데이터 가져오기
+        if (searchPlayers || searchBest) {
+            const { data: allData, error, count } = await query;
+            
+            if (error) throw error;
+            
+            let allGames = allData || [];
+            
+            // 범위 검색 필터링 (JavaScript로 정확한 범위 검색)
+            allGames = allGames.filter(game => {
+                let includeGame = true;
+                
+                // 인원 검색 필터링
+                if (searchPlayers && game.players_recommended) {
+                    includeGame = includeGame && isInRange(searchPlayers, game.players_recommended.toString());
                 }
-            }
-            if (searchBest) {
-                // 범위 검색 지원 (예: "2-4", "3-6")
-                if (searchBest.includes('-')) {
-                    const [minBest, maxBest] = searchBest.split('-').map(s => parseInt(s.trim()));
-                    if (!isNaN(minBest) && !isNaN(maxBest)) {
-                        query = query.gte('players_best', minBest).lte('players_best', maxBest);
-                    }
-                } else {
-                    // 단일 숫자 검색 (예: "3")
-                    const bestNum = parseInt(searchBest);
-                    if (!isNaN(bestNum)) {
-                        query = query.eq('players_best', bestNum);
-                    }
+                
+                // 베스트 인원 검색 필터링
+                if (searchBest && game.players_best) {
+                    includeGame = includeGame && isInRange(searchBest, game.players_best.toString());
                 }
-            }
-            if (weightMin) {
-                query = query.gte('weight', parseFloat(weightMin));
-            }
-            if (weightMax) {
-                query = query.lte('weight', parseFloat(weightMax));
-            }
-            if (showFavoritesOnly) {
-                query = query.eq('is_favorite', true);
-            }
-
-            // 정렬
-            if (sortBy === 'rating') {
-                query = query.order('rating', { ascending: sortOrder === 'asc' });
-            } else if (sortBy === 'weight') {
-                query = query.order('weight', { ascending: sortOrder === 'asc' });
-            } else if (sortBy === 'name') {
-                query = query.order('name', { ascending: sortOrder === 'asc' });
-            }
-
-            // 페이지네이션
+                
+                return includeGame;
+            });
+            
+            // 필터링 후 총 개수와 페이지네이션
+            total = allGames.length;
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize;
+            games = allGames.slice(from, to);
+        } else {
+            // 일반 검색의 경우 기존 페이지네이션 사용
             const from = (page - 1) * pageSize;
             const to = from + pageSize - 1;
             query = query.range(from, to);
@@ -112,159 +152,19 @@ app.get('/', async (req, res) => {
             
             games = data || [];
             total = count || 0;
+        }
 
-            // 리뷰 정보 추가
-            for (let game of games) {
-                const { data: review } = await supabase
-                    .from('reviews')
-                    .select('rating')
-                    .eq('bgg_id', game.bgg_id)
-                    .order('created_at', { ascending: false })
-                    .limit(1);
-                
-                game.myRating = review?.[0]?.rating || null;
-                game.displayName = game.korean_name || game.name;
-            }
-
-        } else {
-            // SQLite 쿼리 (기존 코드)
-            let query = `SELECT 
-                id, bgg_id, name, korean_name, main_image_url, players_min, players_max, players_best, players_recommended,
-                play_time_min, play_time_max, weight, rating, type, category, mechanism, url, is_favorite
-                FROM boardgames WHERE 1=1`;
-            let params = [];
-
-            if (search) {
-                query += ' AND (name LIKE ? OR korean_name LIKE ?)';
-                params.push(`%${search}%`, `%${search}%`);
-            }
-            if (searchPlayers) {
-                try {
-                    // 범위 검색 지원 (예: "2-4", "3-6")
-                    if (searchPlayers.includes('-')) {
-                        const [minPlayers, maxPlayers] = searchPlayers.split('-').map(s => parseInt(s.trim()));
-                        if (!isNaN(minPlayers) && !isNaN(maxPlayers)) {
-                            query += ' AND players_recommended >= ? AND players_recommended <= ?';
-                            params.push(minPlayers, maxPlayers);
-                        }
-                    } else {
-                        // 단일 숫자 검색 (예: "3")
-                        const playerNum = parseInt(searchPlayers);
-                        if (!isNaN(playerNum)) {
-                            query += ' AND players_recommended = ?';
-                            params.push(playerNum);
-                        }
-                    }
-                } catch (e) {}
-            }
-            if (searchBest) {
-                try {
-                    // 범위 검색 지원 (예: "2-4", "3-6")
-                    if (searchBest.includes('-')) {
-                        const [minBest, maxBest] = searchBest.split('-').map(s => parseInt(s.trim()));
-                        if (!isNaN(minBest) && !isNaN(maxBest)) {
-                            query += ' AND players_best >= ? AND players_best <= ?';
-                            params.push(minBest, maxBest);
-                        }
-                    } else {
-                        // 단일 숫자 검색 (예: "3")
-                        const bestNum = parseInt(searchBest);
-                        if (!isNaN(bestNum)) {
-                            query += ' AND players_best = ?';
-                            params.push(bestNum);
-                        }
-                    }
-                } catch (e) {}
-            }
-            if (weightMin) {
-                try {
-                    const minWeight = parseFloat(weightMin);
-                    if (!isNaN(minWeight)) {
-                        query += ' AND weight >= ?';
-                        params.push(minWeight);
-                    }
-                } catch (e) {}
-            }
-            if (weightMax) {
-                try {
-                    const maxWeight = parseFloat(weightMax);
-                    if (!isNaN(maxWeight)) {
-                        query += ' AND weight <= ?';
-                        params.push(maxWeight);
-                    }
-                } catch (e) {}
-            }
-            if (showFavoritesOnly) {
-                query += ' AND is_favorite = 1';
-            }
-
-            // 정렬
-            let orderBy = '';
-            if (sortBy === 'myRating') {
-                orderBy = `ORDER BY (
-                    SELECT rating FROM reviews 
-                    WHERE reviews.bgg_id = boardgames.bgg_id 
-                    ORDER BY created_at DESC LIMIT 1
-                ) ${sortOrder.toUpperCase()}, rating DESC`;
-            } else {
-                const validSortFields = ['rating', 'weight', 'name', 'players_recommended', 'play_time_min'];
-                const sortField = validSortFields.includes(sortBy) ? sortBy : 'rating';
-                orderBy = `ORDER BY ${sortField} ${sortOrder.toUpperCase()}`;
-            }
-
-            // 전체 개수 조회
-            const countQuery = `SELECT COUNT(*) FROM (${query})`;
-            db.get(countQuery, params, (err, row) => {
-                if (err) {
-                    console.error(err);
-                    return res.status(500).send('Database error');
-                }
-
-                total = row['COUNT(*)'];
-                const totalPages = Math.max(1, Math.ceil(total / pageSize));
-                const offset = (page - 1) * pageSize;
-
-                // 데이터 조회
-                query += ' ' + orderBy + ' LIMIT ? OFFSET ?';
-                params.push(pageSize, offset);
-
-                db.all(query, params, (err, rows) => {
-                    if (err) {
-                        console.error(err);
-                        return res.status(500).send('Database error');
-                    }
-
-                    // 리뷰 정보 조회
-                    const gamesWithReviews = rows.map(game => {
-                        return new Promise((resolve) => {
-                            db.get('SELECT rating FROM reviews WHERE bgg_id = ? ORDER BY created_at DESC LIMIT 1', 
-                                [game.bgg_id], (err, review) => {
-                                game.myRating = review ? review.rating : null;
-                                game.displayName = game.korean_name || game.name;
-                                resolve(game);
-                            });
-                        });
-                    });
-
-                    Promise.all(gamesWithReviews).then(games => {
-                        res.render('index', {
-                            games,
-                            currentPage: page,
-                            totalPages,
-                            total,
-                            search,
-                            searchPlayers,
-                            searchBest,
-                            weightMin,
-                            weightMax,
-                            showFavoritesOnly,
-                            sortBy,
-                            sortOrder
-                        });
-                    });
-                });
-            });
-            return;
+        // 리뷰 정보 추가
+        for (let game of games) {
+            const { data: review } = await supabase
+                .from('reviews')
+                .select('rating')
+                .eq('bgg_id', game.bgg_id)
+                .order('created_at', { ascending: false })
+                .limit(1);
+            
+            game.myRating = review?.[0]?.rating || null;
+            game.displayName = game.korean_name || game.name;
         }
 
         const totalPages = Math.max(1, Math.ceil(total / pageSize));
