@@ -57,13 +57,13 @@ app.get('/', async (req, res) => {
                 if (searchPlayers.includes('-')) {
                     const [minPlayers, maxPlayers] = searchPlayers.split('-').map(s => parseInt(s.trim()));
                     if (!isNaN(minPlayers) && !isNaN(maxPlayers)) {
-                        query = query.gte('players_min', minPlayers).lte('players_max', maxPlayers);
+                        query = query.gte('players_recommended', minPlayers).lte('players_recommended', maxPlayers);
                     }
                 } else {
                     // 단일 숫자 검색 (예: "3")
                     const playerNum = parseInt(searchPlayers);
                     if (!isNaN(playerNum)) {
-                        query = query.gte('players_min', playerNum).lte('players_max', playerNum);
+                        query = query.eq('players_recommended', playerNum);
                     }
                 }
             }
@@ -144,15 +144,15 @@ app.get('/', async (req, res) => {
                     if (searchPlayers.includes('-')) {
                         const [minPlayers, maxPlayers] = searchPlayers.split('-').map(s => parseInt(s.trim()));
                         if (!isNaN(minPlayers) && !isNaN(maxPlayers)) {
-                            query += ' AND players_min <= ? AND players_max >= ?';
-                            params.push(maxPlayers, minPlayers);
+                            query += ' AND players_recommended >= ? AND players_recommended <= ?';
+                            params.push(minPlayers, maxPlayers);
                         }
                     } else {
                         // 단일 숫자 검색 (예: "3")
                         const playerNum = parseInt(searchPlayers);
                         if (!isNaN(playerNum)) {
-                            query += ' AND players_min <= ? AND players_max >= ?';
-                            params.push(playerNum, playerNum);
+                            query += ' AND players_recommended = ?';
+                            params.push(playerNum);
                         }
                     }
                 } catch (e) {}
