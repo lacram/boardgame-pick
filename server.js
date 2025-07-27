@@ -52,6 +52,36 @@ app.get('/', async (req, res) => {
             if (search) {
                 query = query.or(`name.ilike.%${search}%,korean_name.ilike.%${search}%`);
             }
+            if (searchPlayers) {
+                // 범위 검색 지원 (예: "2-4", "3-6")
+                if (searchPlayers.includes('-')) {
+                    const [minPlayers, maxPlayers] = searchPlayers.split('-').map(s => parseInt(s.trim()));
+                    if (!isNaN(minPlayers) && !isNaN(maxPlayers)) {
+                        query = query.gte('players_min', minPlayers).lte('players_max', maxPlayers);
+                    }
+                } else {
+                    // 단일 숫자 검색 (예: "3")
+                    const playerNum = parseInt(searchPlayers);
+                    if (!isNaN(playerNum)) {
+                        query = query.gte('players_min', playerNum).lte('players_max', playerNum);
+                    }
+                }
+            }
+            if (searchBest) {
+                // 범위 검색 지원 (예: "2-4", "3-6")
+                if (searchBest.includes('-')) {
+                    const [minBest, maxBest] = searchBest.split('-').map(s => parseInt(s.trim()));
+                    if (!isNaN(minBest) && !isNaN(maxBest)) {
+                        query = query.gte('players_best', minBest).lte('players_best', maxBest);
+                    }
+                } else {
+                    // 단일 숫자 검색 (예: "3")
+                    const bestNum = parseInt(searchBest);
+                    if (!isNaN(bestNum)) {
+                        query = query.eq('players_best', bestNum);
+                    }
+                }
+            }
             if (weightMin) {
                 query = query.gte('weight', parseFloat(weightMin));
             }
@@ -107,6 +137,44 @@ app.get('/', async (req, res) => {
             if (search) {
                 query += ' AND (name LIKE ? OR korean_name LIKE ?)';
                 params.push(`%${search}%`, `%${search}%`);
+            }
+            if (searchPlayers) {
+                try {
+                    // 범위 검색 지원 (예: "2-4", "3-6")
+                    if (searchPlayers.includes('-')) {
+                        const [minPlayers, maxPlayers] = searchPlayers.split('-').map(s => parseInt(s.trim()));
+                        if (!isNaN(minPlayers) && !isNaN(maxPlayers)) {
+                            query += ' AND players_min <= ? AND players_max >= ?';
+                            params.push(maxPlayers, minPlayers);
+                        }
+                    } else {
+                        // 단일 숫자 검색 (예: "3")
+                        const playerNum = parseInt(searchPlayers);
+                        if (!isNaN(playerNum)) {
+                            query += ' AND players_min <= ? AND players_max >= ?';
+                            params.push(playerNum, playerNum);
+                        }
+                    }
+                } catch (e) {}
+            }
+            if (searchBest) {
+                try {
+                    // 범위 검색 지원 (예: "2-4", "3-6")
+                    if (searchBest.includes('-')) {
+                        const [minBest, maxBest] = searchBest.split('-').map(s => parseInt(s.trim()));
+                        if (!isNaN(minBest) && !isNaN(maxBest)) {
+                            query += ' AND players_best >= ? AND players_best <= ?';
+                            params.push(minBest, maxBest);
+                        }
+                    } else {
+                        // 단일 숫자 검색 (예: "3")
+                        const bestNum = parseInt(searchBest);
+                        if (!isNaN(bestNum)) {
+                            query += ' AND players_best = ?';
+                            params.push(bestNum);
+                        }
+                    }
+                } catch (e) {}
             }
             if (weightMin) {
                 try {
