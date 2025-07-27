@@ -455,7 +455,7 @@
                         <div style="display: flex; justify-content: space-between; align-items: start;">
                             <a href="<%= game.url %>" target="_blank" class="game-title"><%= game.displayName %></a>
                             <button class="favorite-button <%= game.is_favorite ? 'active' : '' %>" 
-                                    data-rowid="<%= game.rowid %>" 
+                                    data-rowid="<%= game.bgg_id %>" 
                                     data-favorite="<%= game.is_favorite ? 1 : 0 %>">
                                 <%= game.is_favorite ? '★' : '☆' %>
                             </button>
@@ -557,11 +557,14 @@
         let currentGameName = null;
         let selectedRating = 0;
 
-        function toggleFavorite(rowId, currentFav) {
+        function toggleFavorite(button, rowId, currentFav) {
             const requestData = {
                 rowId: rowId,
                 currentFav: currentFav
             };
+            
+            // 버튼 비활성화
+            button.disabled = true;
             
             fetch('/toggle-favorite', {
                 method: 'POST',
@@ -573,7 +576,16 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    location.reload();
+                    // 버튼 상태만 업데이트
+                    if (data.isFavorite) {
+                        button.innerHTML = '★';
+                        button.classList.add('active');
+                        button.setAttribute('data-favorite', '1');
+                    } else {
+                        button.innerHTML = '☆';
+                        button.classList.remove('active');
+                        button.setAttribute('data-favorite', '0');
+                    }
                 } else {
                     alert('즐겨찾기 업데이트 실패');
                 }
@@ -581,6 +593,10 @@
             .catch(error => {
                 console.error('즐겨찾기 토글 에러:', error);
                 alert('즐겨찾기 토글 중 오류가 발생했습니다.');
+            })
+            .finally(() => {
+                // 버튼 다시 활성화
+                button.disabled = false;
             });
         }
 
@@ -647,7 +663,8 @@
             .then(data => {
                 if (data.success) {
                     closeRatingModal();
-                    location.reload();
+                    // 간단한 성공 메시지 표시
+                    alert('평점이 저장되었습니다!');
                 }
             })
             .catch(error => {
@@ -698,7 +715,7 @@
                 button.addEventListener('click', function() {
                     const rowId = this.getAttribute('data-rowid');
                     const currentFav = this.getAttribute('data-favorite');
-                    toggleFavorite(parseInt(rowId), parseInt(currentFav));
+                    toggleFavorite(this, parseInt(rowId), parseInt(currentFav));
                 });
             });
         });

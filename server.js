@@ -1,7 +1,7 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
-const supabase = require('./sqlite/migrate-to-supabase');
+const supabase = require('./supabase-client');
 
 const app = express();
 const PORT = process.env.PORT;
@@ -46,7 +46,7 @@ app.get('/', async (req, res) => {
             // Supabase 쿼리
             let query = supabase
                 .from('boardgames')
-                .select('*', { count: 'exact' });
+                .select('id, *', { count: 'exact' });
 
             // 필터링
             if (search) {
@@ -99,7 +99,7 @@ app.get('/', async (req, res) => {
         } else {
             // SQLite 쿼리 (기존 코드)
             let query = `SELECT 
-                rowid as rowid, bgg_id, name, korean_name, main_image_url, players_min, players_max, players_best, players_recommended,
+                id, bgg_id, name, korean_name, main_image_url, players_min, players_max, players_best, players_recommended,
                 play_time_min, play_time_max, weight, rating, type, category, mechanism, url, is_favorite
                 FROM boardgames WHERE 1=1`;
             let params = [];
@@ -232,20 +232,20 @@ app.post('/toggle-favorite', async (req, res) => {
             const { error } = await supabase
                 .from('boardgames')
                 .update({ is_favorite: newFav })
-                .eq('rowid', rowId);
+                .eq('bgg_id', rowId);
             
             if (error) throw error;
+            res.json({ success: true, isFavorite: newFav });
         } else {
-            db.run('UPDATE boardgames SET is_favorite = ? WHERE rowid = ?', 
+            db.run('UPDATE boardgames SET is_favorite = ? WHERE bgg_id = ?', 
                 [newFav, rowId], function(err) {
                 if (err) {
                     console.error('데이터베이스 에러:', err);
                     return res.status(500).json({ error: 'Database error' });
                 }
+                res.json({ success: true, isFavorite: newFav });
             });
         }
-        
-        res.json({ success: true, isFavorite: newFav });
     } catch (error) {
         console.error('즐겨찾기 토글 오류:', error);
         res.status(500).json({ error: 'Database error' });
@@ -263,6 +263,7 @@ app.post('/add-review', async (req, res) => {
                 .insert([{ bgg_id: bggId, rating, text }]);
             
             if (error) throw error;
+            res.json({ success: true });
         } else {
             db.run('INSERT INTO reviews (bgg_id, rating, text) VALUES (?, ?, ?)', 
                 [bggId, rating, text], (err) => {
@@ -270,10 +271,9 @@ app.post('/add-review', async (req, res) => {
                     console.error(err);
                     return res.status(500).json({ error: 'Database error' });
                 }
+                res.json({ success: true });
             });
         }
-        
-        res.json({ success: true });
     } catch (error) {
         console.error('리뷰 추가 오류:', error);
         res.status(500).json({ error: 'Database error' });
@@ -285,8 +285,6 @@ app.get('/get-review', async (req, res) => {
     const { bggId } = req.query;
 
     try {
-        let review;
-        
         if (useSupabase) {
             const { data, error } = await supabase
                 .from('reviews')
@@ -296,7 +294,8 @@ app.get('/get-review', async (req, res) => {
                 .limit(1);
             
             if (error) throw error;
-            review = data?.[0];
+            const review = data?.[0];
+            res.json({ success: true, review });
         } else {
             db.get('SELECT rating, text FROM reviews WHERE bgg_id = ? ORDER BY created_at DESC LIMIT 1', 
                 [bggId], (err, reviewData) => {
@@ -304,11 +303,9 @@ app.get('/get-review', async (req, res) => {
                     console.error(err);
                     return res.status(500).json({ error: 'Database error' });
                 }
-                review = reviewData;
+                res.json({ success: true, review: reviewData });
             });
         }
-        
-        res.json({ success: true, review });
     } catch (error) {
         console.error('리뷰 조회 오류:', error);
         res.status(500).json({ error: 'Database error' });
