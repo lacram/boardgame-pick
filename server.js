@@ -98,10 +98,10 @@ app.get('/', async (req, res) => {
         let games = [];
         let total = 0;
 
-        // Supabase 쿼리
+        // Supabase 쿼리 (선택적 컬럼 로딩으로 최적화)
         let query = supabase
             .from('boardgames')
-            .select('id, *', { count: 'exact' });
+            .select('id, name, korean_name, rating, weight, is_favorite, players_recommended, players_best, bgg_id, main_image_url, url, play_time_min, play_time_max', { count: 'exact' });
 
         // 필터링
         if (search) {
@@ -168,17 +168,28 @@ app.get('/', async (req, res) => {
 
         const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-        // 리뷰 정보 추가
-        for (let game of games) {
-            const { data: review } = await supabase
+        // N+1 문제 해결: 한 번에 모든 리뷰 가져오기
+        if (games.length > 0) {
+            const bggIds = games.map(game => game.bgg_id);
+            const { data: reviews } = await supabase
                 .from('reviews')
-                .select('rating')
-                .eq('bgg_id', game.bgg_id)
-                .order('created_at', { ascending: false })
-                .limit(1);
-            
-            game.myRating = review?.[0]?.rating || null;
-            game.displayName = game.korean_name || game.name;
+                .select('bgg_id, rating')
+                .in('bgg_id', bggIds)
+                .order('created_at', { ascending: false });
+
+            // 리뷰 맵 생성 (가장 최신 리뷰만)
+            const reviewMap = new Map();
+            reviews?.forEach(review => {
+                if (!reviewMap.has(review.bgg_id)) {
+                    reviewMap.set(review.bgg_id, review.rating);
+                }
+            });
+
+            // 게임에 리뷰 정보 추가
+            games.forEach(game => {
+                game.myRating = reviewMap.get(game.bgg_id) || null;
+                game.displayName = game.korean_name || game.name;
+            });
         }
 
         const renderData = {

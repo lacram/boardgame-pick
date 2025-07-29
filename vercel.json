@@ -19,5 +19,6 @@
     "server.js": {
       "maxDuration": 30
     }
-  }
+  },
+  "regions": ["icn1"]
 } 
