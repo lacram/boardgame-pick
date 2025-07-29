@@ -10,6 +10,23 @@ const PAGE_SIZE = parseInt(process.env.PAGE_SIZE) || 20;
 const DEFAULT_SORT_BY = process.env.DEFAULT_SORT_BY || 'rating';
 const DEFAULT_SORT_ORDER = process.env.DEFAULT_SORT_ORDER || 'desc';
 
+// 메모리 캐시 설정
+const cache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5분
+
+// 캐시 정리 함수 (10분마다 실행)
+setInterval(() => {
+    const now = Date.now();
+    let cleanedCount = 0;
+    
+    for (const [key, value] of cache.entries()) {
+        if (now - value.timestamp > CACHE_TTL) {
+            cache.delete(key);
+            cleanedCount++;
+        }
+    }
+}, 10 * 60 * 1000); // 10분마다
+
 // 검색값이 범위에 포함되는지 확인하는 함수
 function isInRange(searchValue, rangeStr) {
     if (!rangeStr) return false;
@@ -58,8 +75,6 @@ console.log('Supabase 사용');
 
 // 메인 페이지
 app.get('/', async (req, res) => {
-    const startTime = Date.now();
-    
     const page = parseInt(req.query.page) || 1;
     const search = req.query.search || '';
     const searchPlayers = req.query.searchPlayers || '';
@@ -69,6 +84,15 @@ app.get('/', async (req, res) => {
     const showFavoritesOnly = req.query.showFavoritesOnly === 'on';
     const sortBy = req.query.sortBy || DEFAULT_SORT_BY;
     const sortOrder = req.query.sortOrder || DEFAULT_SORT_ORDER;
+
+    // 캐시 키 생성
+    const cacheKey = `${search}-${searchPlayers}-${searchBest}-${weightMin}-${weightMax}-${showFavoritesOnly}-${sortBy}-${sortOrder}-${page}`;
+    
+    // 캐시 확인
+    const cached = cache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+        return res.render('index', cached.data);
+    }
 
     try {
         let games = [];
@@ -101,20 +125,13 @@ app.get('/', async (req, res) => {
 
         // 범위 검색이 있는 경우 페이지네이션 없이 모든 데이터 가져오기
         if (searchPlayers || searchBest) {
-            console.log(`🔍 범위 검색 시작: ${searchPlayers || ''} ${searchBest || ''}`);
-            const queryStartTime = Date.now();
-            
             const { data: allData, error, count } = await query;
             
             if (error) throw error;
             
-            const queryEndTime = Date.now();
-            console.log(`📊 DB 쿼리 시간: ${queryEndTime - queryStartTime}ms, 데이터 개수: ${allData?.length || 0}`);
-            
             let allGames = allData || [];
             
             // 범위 검색 필터링 (JavaScript로 정확한 범위 검색)
-            const filterStartTime = Date.now();
             allGames = allGames.filter(game => {
                 let includeGame = true;
                 
@@ -130,9 +147,6 @@ app.get('/', async (req, res) => {
                 
                 return includeGame;
             });
-            
-            const filterEndTime = Date.now();
-            console.log(`🎯 필터링 시간: ${filterEndTime - filterStartTime}ms, 필터링 후 개수: ${allGames.length}`);
             
             // 필터링 후 총 개수와 페이지네이션
             total = allGames.length;
@@ -154,10 +168,20 @@ app.get('/', async (req, res) => {
 
         const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-        const endTime = Date.now();
-        console.log(`⚡ 전체 요청 처리 시간: ${endTime - startTime}ms`);
+        // 리뷰 정보 추가
+        for (let game of games) {
+            const { data: review } = await supabase
+                .from('reviews')
+                .select('rating')
+                .eq('bgg_id', game.bgg_id)
+                .order('created_at', { ascending: false })
+                .limit(1);
+            
+            game.myRating = review?.[0]?.rating || null;
+            game.displayName = game.korean_name || game.name;
+        }
 
-        res.render('index', {
+        const renderData = {
             games,
             currentPage: page,
             totalPages,
@@ -170,7 +194,15 @@ app.get('/', async (req, res) => {
             showFavoritesOnly,
             sortBy,
             sortOrder
+        };
+
+        // 캐시 저장
+        cache.set(cacheKey, {
+            data: renderData,
+            timestamp: Date.now()
         });
+
+        res.render('index', renderData);
     } catch (error) {
         console.error('데이터베이스 오류:', error);
         res.status(500).send('데이터베이스 오류가 발생했습니다.');
