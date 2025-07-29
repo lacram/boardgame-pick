@@ -63,7 +63,6 @@ function isInRange(searchValue, rangeStr) {
 // 미들웨어 설정
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));
-app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
@@ -229,6 +228,10 @@ app.post('/toggle-favorite', async (req, res) => {
             .eq('bgg_id', rowId);
         
         if (error) throw error;
+        
+        // 캐시 무효화
+        cache.clear();
+        
         res.json({ success: true, isFavorite: newFav });
     } catch (error) {
         console.error('즐겨찾기 토글 오류:', error);
@@ -246,6 +249,10 @@ app.post('/add-review', async (req, res) => {
             .insert([{ bgg_id: bggId, rating, text }]);
         
         if (error) throw error;
+        
+        // 캐시 무효화
+        cache.clear();
+        
         res.json({ success: true });
     } catch (error) {
         console.error('리뷰 추가 오류:', error);
