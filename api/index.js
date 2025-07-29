@@ -1,9 +1,8 @@
 const express = require('express');
 const path = require('path');
-const supabase = require('./supabase-client');
+const supabase = require('../supabase-client');
 
 const app = express();
-const PORT = process.env.PORT;
 
 // 환경 변수를 상수로 미리 로드 (성능 최적화)
 const PAGE_SIZE = parseInt(process.env.PAGE_SIZE) || 20;
@@ -61,12 +60,10 @@ function isInRange(searchValue, rangeStr) {
     return false;
 }
 
-
-
 // 미들웨어 설정
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
-app.use(express.static(path.join(__dirname, 'public')));
+app.set('views', path.join(__dirname, '../views'));
+app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
@@ -277,7 +274,13 @@ app.get('/get-review', async (req, res) => {
     }
 });
 
-// 서버 시작
-app.listen(PORT, () => {
-    console.log(`서버가 http://localhost:${PORT} 에서 실행 중입니다.`);
-}); 
+// Vercel 서버리스 함수로 export
+module.exports = app;
+
+// 로컬 개발용 서버 시작 (Vercel에서는 실행되지 않음)
+if (process.env.NODE_ENV !== 'production' || process.env.VERCEL !== '1') {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`서버가 http://localhost:${PORT} 에서 실행 중입니다.`);
+    });
+} 
