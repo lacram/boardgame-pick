@@ -9,6 +9,9 @@ CREATE INDEX IF NOT EXISTS idx_boardgames_weight ON boardgames(weight);
 -- 2. is_favorite 컬럼 인덱스 (즐겨찾기 필터링 최적화)
 CREATE INDEX IF NOT EXISTS idx_boardgames_is_favorite ON boardgames(is_favorite);
 
+-- 2-1. is_scheduled 컬럼 인덱스 (플레이 예정 필터링 최적화)
+CREATE INDEX IF NOT EXISTS idx_boardgames_is_scheduled ON boardgames(is_scheduled);
+
 -- 3. rating 컬럼 인덱스 (정렬 최적화)
 CREATE INDEX IF NOT EXISTS idx_boardgames_rating ON boardgames(rating DESC);
 
@@ -23,6 +26,12 @@ CREATE INDEX IF NOT EXISTS idx_boardgames_favorite_rating ON boardgames(is_favor
 
 -- 7. 복합 인덱스: 즐겨찾기 + 무게 (필터링 + 정렬)
 CREATE INDEX IF NOT EXISTS idx_boardgames_favorite_weight ON boardgames(is_favorite, weight);
+
+-- 7-1. 복합 인덱스: 플레이 예정 + 평점 (자주 사용되는 조합)
+CREATE INDEX IF NOT EXISTS idx_boardgames_scheduled_rating ON boardgames(is_scheduled, rating DESC);
+
+-- 7-2. 복합 인덱스: 플레이 예정 + 무게 (필터링 + 정렬)
+CREATE INDEX IF NOT EXISTS idx_boardgames_scheduled_weight ON boardgames(is_scheduled, weight);
 
 -- 8. players_recommended 컬럼 인덱스 (향후 범위 검색 최적화)
 CREATE INDEX IF NOT EXISTS idx_boardgames_players_recommended ON boardgames(players_recommended);

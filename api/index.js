@@ -78,11 +78,12 @@ app.get('/', async (req, res) => {
     const weightMin = req.query.weightMin || '';
     const weightMax = req.query.weightMax || '';
     const showFavoritesOnly = req.query.showFavoritesOnly === 'on';
+    const showScheduledOnly = req.query.showScheduledOnly === 'on';
     const sortBy = req.query.sortBy || DEFAULT_SORT_BY;
     const sortOrder = req.query.sortOrder || DEFAULT_SORT_ORDER;
 
     // 캐시 키 생성
-    const cacheKey = `${search}-${searchPlayers}-${searchBest}-${weightMin}-${weightMax}-${showFavoritesOnly}-${sortBy}-${sortOrder}-${page}`;
+    const cacheKey = `${search}-${searchPlayers}-${searchBest}-${weightMin}-${weightMax}-${showFavoritesOnly}-${showScheduledOnly}-${sortBy}-${sortOrder}-${page}`;
     
     // 캐시 확인
     const cached = cache.get(cacheKey);
@@ -97,7 +98,7 @@ app.get('/', async (req, res) => {
         // Supabase 쿼리 (선택적 컬럼 로딩으로 최적화)
         let query = supabase
             .from('boardgames')
-            .select('id, name, korean_name, rating, weight, is_favorite, players_recommended, players_best, bgg_id, main_image_url, url, play_time_min, play_time_max', { count: 'exact' });
+            .select('id, name, korean_name, rating, weight, is_favorite, is_scheduled, players_recommended, players_best, bgg_id, main_image_url, url, play_time_min, play_time_max', { count: 'exact' });
 
         // 필터링
         if (search) {
@@ -111,6 +112,9 @@ app.get('/', async (req, res) => {
         }
         if (showFavoritesOnly) {
             query = query.eq('is_favorite', true);
+        }
+        if (showScheduledOnly) {
+            query = query.eq('is_scheduled', true);
         }
 
         // 정렬
@@ -199,6 +203,7 @@ app.get('/', async (req, res) => {
             weightMin,
             weightMax,
             showFavoritesOnly,
+            showScheduledOnly,
             sortBy,
             sortOrder
         };
@@ -235,6 +240,29 @@ app.post('/toggle-favorite', async (req, res) => {
         res.json({ success: true, isFavorite: newFav });
     } catch (error) {
         console.error('즐겨찾기 토글 오류:', error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+// 플레이 예정 토글
+app.post('/toggle-scheduled', async (req, res) => {
+    const { rowId, currentScheduled } = req.body;
+    const newScheduled = currentScheduled ? 0 : 1;
+
+    try {
+        const { error } = await supabase
+            .from('boardgames')
+            .update({ is_scheduled: newScheduled })
+            .eq('bgg_id', rowId);
+        
+        if (error) throw error;
+        
+        // 캐시 무효화
+        cache.clear();
+        
+        res.json({ success: true, isScheduled: newScheduled });
+    } catch (error) {
+        console.error('플레이 예정 토글 오류:', error);
         res.status(500).json({ error: 'Database error' });
     }
 });
