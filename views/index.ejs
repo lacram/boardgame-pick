@@ -102,19 +102,20 @@
                         <div class="game-info">⏱️ <%= game.play_time_min || 0 %>~<%= game.play_time_max || 0 %>분 
                             | 난이도: <%= game.weight || 0 %></div>
                         <div class="game-info">🌟 <%= game.rating || 0 %> 
-                            | 내 평점: <%= game.myRating || '-' %>
+                            | 내 평점: <span id="myRating-<%= game.bgg_id %>"><%= game.myRating || '-' %></span>
                             <button onclick="openRatingModal(<%= game.bgg_id %>)" 
                                     data-game-name="<%= game.displayName %>"
-                                    class="rating-button">
-                                평점 입력
+                                    class="rating-button"
+                                    aria-label="평점 입력">
+                                <img src="/images/icon-pencil.svg" alt="" class="action-icon">
                             </button>
-                            <% if (game.myRating) { %>
-                                <button onclick="openReviewModal(<%= game.bgg_id %>)" 
-                                        data-game-name="<%= game.displayName %>"
-                                        class="review-button">
-                                    리뷰 보기
-                                </button>
-                            <% } %>
+                            <button onclick="openReviewModal(<%= game.bgg_id %>)" 
+                                    id="reviewButton-<%= game.bgg_id %>"
+                                    data-game-name="<%= game.displayName %>"
+                                    class="review-button"
+                                    style="display: <%= game.myRating ? 'inline-flex' : 'none' %>;">
+                                <img src="/images/icon-chat.svg" alt="" class="action-icon">
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -145,19 +146,22 @@
     <!-- 평점 입력 모달 -->
     <div id="ratingModal" class="rating-modal">
         <div class="modal-content">
-            <div class="modal-title">내 평점 남기기</div>
+            <div class="modal-header">
+                <div class="modal-title">내 평점 남기기</div>
+                <button class="modal-close" onclick="closeRatingModal()" aria-label="닫기">✕</button>
+            </div>
             <div class="rating-text" id="ratingText">별점을 선택해주세요</div>
             <div class="star-rating">
-                <span class="star" onclick="selectRating(1)">⭐</span>
-                <span class="star" onclick="selectRating(2)">⭐</span>
-                <span class="star" onclick="selectRating(3)">⭐</span>
-                <span class="star" onclick="selectRating(4)">⭐</span>
-                <span class="star" onclick="selectRating(5)">⭐</span>
-                <span class="star" onclick="selectRating(6)">⭐</span>
-                <span class="star" onclick="selectRating(7)">⭐</span>
-                <span class="star" onclick="selectRating(8)">⭐</span>
-                <span class="star" onclick="selectRating(9)">⭐</span>
-                <span class="star" onclick="selectRating(10)">⭐</span>
+                <span class="star" onclick="selectRating(1)">☆</span>
+                <span class="star" onclick="selectRating(2)">☆</span>
+                <span class="star" onclick="selectRating(3)">☆</span>
+                <span class="star" onclick="selectRating(4)">☆</span>
+                <span class="star" onclick="selectRating(5)">☆</span>
+                <span class="star" onclick="selectRating(6)">☆</span>
+                <span class="star" onclick="selectRating(7)">☆</span>
+                <span class="star" onclick="selectRating(8)">☆</span>
+                <span class="star" onclick="selectRating(9)">☆</span>
+                <span class="star" onclick="selectRating(10)">☆</span>
             </div>
             <textarea id="reviewText" class="review-input" placeholder="리뷰를 작성해주세요 (선택사항)"></textarea>
             <div class="modal-buttons">
@@ -170,14 +174,18 @@
     <!-- 리뷰 보기 모달 -->
     <div id="reviewModal" class="rating-modal">
         <div class="modal-content">
-            <div class="modal-title">내 리뷰</div>
-            <div id="reviewContent" style="margin-bottom: 20px;">
-                <div style="margin-bottom: 15px;">
-                    <strong>평점:</strong> <span id="reviewRatingDisplay"></span>
+            <div class="modal-header">
+                <div class="modal-title">내 리뷰</div>
+                <button class="modal-close" onclick="closeReviewModal()" aria-label="닫기">✕</button>
+            </div>
+            <div id="reviewContent" class="review-content">
+                <div class="review-meta">
+                    <span class="review-label">평점</span>
+                    <span id="reviewRatingDisplay" class="review-rating"></span>
                 </div>
-                <div>
-                    <strong>리뷰:</strong>
-                    <div id="reviewTextDisplay" style="margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 6px; min-height: 60px;"></div>
+                <div class="review-section">
+                    <span class="review-label">리뷰</span>
+                    <div id="reviewTextDisplay" class="review-text"></div>
                 </div>
             </div>
             <div class="modal-buttons">

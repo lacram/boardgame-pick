@@ -6,9 +6,23 @@ function openRatingModal(bggId) {
     currentGameName = button.getAttribute('data-game-name');
     
     selectedRating = 0;
+    document.getElementById('reviewText').value = '';
     updateStarDisplay();
-    
+
     document.getElementById('ratingModal').style.display = 'block';
+
+    fetch(`/get-review?bggId=${bggId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.review) {
+                selectedRating = data.review.rating || 0;
+                document.getElementById('reviewText').value = data.review.text || '';
+                updateStarDisplay();
+            }
+        })
+        .catch(error => {
+            console.error('기존 리뷰 조회 에러:', error);
+        });
 }
 
 function closeRatingModal() {
@@ -23,8 +37,10 @@ function updateStarDisplay() {
         const rating = index + 1;
         if (rating <= selectedRating) {
             star.classList.add('active');
+            star.textContent = '★';
         } else {
             star.classList.remove('active');
+            star.textContent = '☆';
         }
     });
     
@@ -63,9 +79,13 @@ function saveRating() {
     .then(data => {
         if (data.success) {
             closeRatingModal();
+            const ratingEl = document.getElementById(`myRating-${currentBggId}`);
+            if (ratingEl) ratingEl.textContent = selectedRating;
+
+            const reviewButton = document.getElementById(`reviewButton-${currentBggId}`);
+            if (reviewButton) reviewButton.style.display = 'inline-flex';
+
             alert('평점이 저장되었습니다!');
-            // 페이지 새로고침으로 업데이트된 평점 표시
-            window.location.reload();
         }
     })
     .catch(error => {
