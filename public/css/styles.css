@@ -245,6 +245,12 @@ body {
     display: block;
 }
 
+.scheduled-icon {
+    width: 22px;
+    height: 22px;
+    display: block;
+}
+
 .rating-modal {
     display: none;
     position: fixed;

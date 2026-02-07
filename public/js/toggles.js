@@ -64,12 +64,13 @@ function toggleScheduled(button, rowId, currentScheduled) {
     .then(data => {
         if (data.success) {
             // 버튼 상태만 업데이트
+            const icon = button.querySelector('img');
             if (data.isScheduled) {
-                button.innerHTML = '◆';
+                if (icon) icon.src = '/images/scheduled-on.svg';
                 button.classList.add('active');
                 button.setAttribute('data-scheduled', '1');
             } else {
-                button.innerHTML = '◇';
+                if (icon) icon.src = '/images/scheduled-off.svg';
                 button.classList.remove('active');
                 button.setAttribute('data-scheduled', '0');
             }

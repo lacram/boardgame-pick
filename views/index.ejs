@@ -89,7 +89,8 @@
                                 <button class="scheduled-button <%= game.is_scheduled ? 'active' : '' %>" 
                                         data-rowid="<%= game.bgg_id %>" 
                                         data-scheduled="<%= game.is_scheduled ? 1 : 0 %>">
-                                    <%= game.is_scheduled ? '◆' : '◇' %>
+                                    <img src="<%= game.is_scheduled ? '/images/scheduled-on.svg' : '/images/scheduled-off.svg' %>" 
+                                         alt="플레이 예정" class="scheduled-icon">
                                 </button>
                             </div>
                         </div>
