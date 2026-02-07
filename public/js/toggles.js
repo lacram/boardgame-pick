@@ -20,12 +20,13 @@ function toggleFavorite(button, rowId, currentFav) {
     .then(data => {
         if (data.success) {
             // 버튼 상태만 업데이트
+            const icon = button.querySelector('img');
             if (data.isFavorite) {
-                button.innerHTML = '★';
+                if (icon) icon.src = '/images/bookmark-on.svg';
                 button.classList.add('active');
                 button.setAttribute('data-favorite', '1');
             } else {
-                button.innerHTML = '☆';
+                if (icon) icon.src = '/images/bookmark-off.svg';
                 button.classList.remove('active');
                 button.setAttribute('data-favorite', '0');
             }

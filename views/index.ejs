@@ -8,9 +8,17 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1 style="font-size: 50px; font-weight: bold; color: #1976d2;">Boardgame Pick</h1>
-        </div>
+        <header class="header">
+            <div class="brand">
+                <div class="brand-mark" aria-hidden="true">
+                    <div class="brand-dice">🎲</div>
+                </div>
+                <div class="brand-text">
+                    <h1 class="brand-title">Boardgame Pick</h1>
+                    <p class="brand-subtitle">보드게임 취향을 빠르게 발견하는 스마트 큐레이션</p>
+                </div>
+            </div>
+        </header>
 
         <!-- 검색 폼 -->
         <form class="search-form" method="GET">
@@ -73,7 +81,8 @@
                                 <button class="favorite-button <%= game.is_favorite ? 'active' : '' %>" 
                                         data-rowid="<%= game.bgg_id %>" 
                                         data-favorite="<%= game.is_favorite ? 1 : 0 %>">
-                                    <%= game.is_favorite ? '★' : '☆' %>
+                                    <img src="<%= game.is_favorite ? '/images/bookmark-on.svg' : '/images/bookmark-off.svg' %>" 
+                                         alt="즐겨찾기" class="bookmark-icon">
                                 </button>
                                 <button class="scheduled-button <%= game.is_scheduled ? 'active' : '' %>" 
                                         data-rowid="<%= game.bgg_id %>" 
@@ -83,9 +92,9 @@
                             </div>
                         </div>
                         <div class="game-info">
-                            <% if (game.players_recommended) { %>👥 <%= game.players_recommended %><% } %>
-                            <% if (game.players_recommended && game.players_best) { %> | <% } %>
-                            <% if (game.players_best) { %>⭐ <%= game.players_best %><% } %>
+                            <% if (game.playersRecommendedDisplay) { %>👥 <%= game.playersRecommendedDisplay %><% } %>
+                            <% if (game.playersRecommendedDisplay && game.playersBestDisplay) { %> | <% } %>
+                            <% if (game.playersBestDisplay) { %>⭐ <%= game.playersBestDisplay %><% } %>
                         </div>
                         <div class="game-info">⏱️ <%= game.play_time_min || 0 %>~<%= game.play_time_max || 0 %>분 
                             | 난이도: <%= game.weight || 0 %></div>

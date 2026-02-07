@@ -1,5 +1,5 @@
 const supabase = require('../../supabase-client');
-const { isInRange } = require('../../utils/searchUtils');
+const { parsePlayersToSet } = require('../../utils/searchUtils');
 const config = require('../../config');
 
 class GameService {
@@ -18,13 +18,14 @@ class GameService {
             .select(`
                 id, name, korean_name, rating, weight, 
                 is_favorite, is_scheduled, players_recommended, 
-                players_best, bgg_id, main_image_url, url, 
+                players_best, players_recommended_raw, players_best_raw,
+                bgg_id, main_image_url, url, 
                 play_time_min, play_time_max
             `, { count: 'exact' });
 
         // 필터링 적용
         query = this._applyFilters(query, {
-            search, weightMin, weightMax, showFavoritesOnly, showScheduledOnly
+            search, searchPlayers, searchBest, weightMin, weightMax, showFavoritesOnly, showScheduledOnly
         });
 
         // 정렬 적용
@@ -32,14 +33,7 @@ class GameService {
 
         let games, total;
 
-        // 범위 검색이 있는 경우 특별 처리
-        if (searchPlayers || searchBest) {
-            ({ games, total } = await this._handleRangeSearch(query, {
-                searchPlayers, searchBest, page
-            }));
-        } else {
-            ({ games, total } = await this._handleRegularSearch(query, page));
-        }
+        ({ games, total } = await this._handleRegularSearch(query, page));
 
         // 리뷰 정보 추가
         if (games.length > 0) {
@@ -55,10 +49,25 @@ class GameService {
      * 필터링 로직 적용
      */
     _applyFilters(query, filters) {
-        const { search, weightMin, weightMax, showFavoritesOnly, showScheduledOnly } = filters;
+        const {
+            search, searchPlayers, searchBest,
+            weightMin, weightMax, showFavoritesOnly, showScheduledOnly
+        } = filters;
 
         if (search) {
             query = query.or(`name.ilike.%${search}%,korean_name.ilike.%${search}%`);
+        }
+        if (searchPlayers) {
+            const playersSet = parsePlayersToSet(searchPlayers);
+            if (playersSet.length > 0) {
+                query = query.overlaps('players_recommended_set', playersSet);
+            }
+        }
+        if (searchBest) {
+            const bestSet = parsePlayersToSet(searchBest);
+            if (bestSet.length > 0) {
+                query = query.overlaps('players_best_set', bestSet);
+            }
         }
         if (weightMin) {
             query = query.gte('weight', parseFloat(weightMin));
@@ -66,11 +75,15 @@ class GameService {
         if (weightMax) {
             query = query.lte('weight', parseFloat(weightMax));
         }
-        if (showFavoritesOnly) {
-            query = query.eq('is_favorite', true);
-        }
-        if (showScheduledOnly) {
-            query = query.eq('is_scheduled', true);
+        if (showFavoritesOnly && showScheduledOnly) {
+            query = query.or('is_favorite.eq.true,is_scheduled.eq.true');
+        } else {
+            if (showFavoritesOnly) {
+                query = query.eq('is_favorite', true);
+            }
+            if (showScheduledOnly) {
+                query = query.eq('is_scheduled', true);
+            }
         }
 
         return query;
@@ -85,41 +98,6 @@ class GameService {
             query = query.order(sortBy, { ascending: sortOrder === 'asc' });
         }
         return query;
-    }
-
-    /**
-     * 범위 검색 처리 (인원수 등)
-     */
-    async _handleRangeSearch(query, params) {
-        const { searchPlayers, searchBest, page } = params;
-        
-        const { data: allData, error, count } = await query;
-        if (error) throw error;
-
-        let allGames = allData || [];
-
-        // JavaScript로 범위 필터링
-        allGames = allGames.filter(game => {
-            let includeGame = true;
-
-            if (searchPlayers && game.players_recommended) {
-                includeGame = includeGame && isInRange(searchPlayers, game.players_recommended.toString());
-            }
-
-            if (searchBest && game.players_best) {
-                includeGame = includeGame && isInRange(searchBest, game.players_best.toString());
-            }
-
-            return includeGame;
-        });
-
-        // 페이지네이션 적용
-        const total = allGames.length;
-        const from = (page - 1) * config.pageSize;
-        const to = from + config.pageSize;
-        const games = allGames.slice(from, to);
-
-        return { games, total };
     }
 
     /**
@@ -164,6 +142,8 @@ class GameService {
         games.forEach(game => {
             game.myRating = reviewMap.get(game.bgg_id) || null;
             game.displayName = game.korean_name || game.name;
+            game.playersRecommendedDisplay = game.players_recommended_raw || game.players_recommended || '';
+            game.playersBestDisplay = game.players_best_raw || game.players_best || '';
         });
     }
 
