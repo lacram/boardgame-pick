@@ -213,6 +213,20 @@ body {
     line-height: 1.3;
 }
 
+.game-info-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.game-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
 .favorite-button, .scheduled-button {
     background: none;
     border: none;
@@ -541,6 +555,12 @@ body {
         margin-bottom: 3px;
         line-height: 1.2;
     }
+
+    .game-info-actions {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
     
     .favorite-button, .scheduled-button {
         font-size: 16px;
@@ -552,8 +572,9 @@ body {
         min-width: 40px;
     }
     
-    .rating-button {
-        font-size: 11px;
-        padding: 3px 8px;
+    .rating-button,
+    .review-button {
+        width: 28px;
+        height: 28px;
     }
 }

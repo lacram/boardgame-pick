@@ -101,21 +101,23 @@
                         </div>
                         <div class="game-info">⏱️ <%= game.play_time_min || 0 %>~<%= game.play_time_max || 0 %>분 
                             | 난이도: <%= game.weight || 0 %></div>
-                        <div class="game-info">🌟 <%= game.rating || 0 %> 
-                            | 내 평점: <span id="myRating-<%= game.bgg_id %>"><%= game.myRating || '-' %></span>
-                            <button onclick="openRatingModal(<%= game.bgg_id %>)" 
-                                    data-game-name="<%= game.displayName %>"
-                                    class="rating-button"
-                                    aria-label="평점 입력">
-                                <img src="/images/icon-pencil.svg" alt="" class="action-icon">
-                            </button>
-                            <button onclick="openReviewModal(<%= game.bgg_id %>)" 
-                                    id="reviewButton-<%= game.bgg_id %>"
-                                    data-game-name="<%= game.displayName %>"
-                                    class="review-button"
-                                    style="display: <%= game.myRating ? 'inline-flex' : 'none' %>;">
-                                <img src="/images/icon-chat.svg" alt="" class="action-icon">
-                            </button>
+                        <div class="game-info game-info-actions">
+                            <span>🌟 <%= game.rating || 0 %> | 내 평점: <span id="myRating-<%= game.bgg_id %>"><%= game.myRating || '-' %></span></span>
+                            <span class="game-actions">
+                                <button onclick="openRatingModal(<%= game.bgg_id %>)" 
+                                        data-game-name="<%= game.displayName %>"
+                                        class="rating-button"
+                                        aria-label="평점 입력">
+                                    <img src="/images/icon-pencil.svg" alt="" class="action-icon">
+                                </button>
+                                <button onclick="openReviewModal(<%= game.bgg_id %>)" 
+                                        id="reviewButton-<%= game.bgg_id %>"
+                                        data-game-name="<%= game.displayName %>"
+                                        class="review-button"
+                                        style="display: <%= game.myRating ? 'inline-flex' : 'none' %>;">
+                                    <img src="/images/icon-chat.svg" alt="" class="action-icon">
+                                </button>
+                            </span>
                         </div>
                     </div>
                 </div>
