@@ -17,7 +17,10 @@ const config = {
     supabase: {
         url: process.env.SUPABASE_URL,
         anonKey: process.env.SUPABASE_ANON_KEY
-    }
+    },
+
+    // 리뷰 설정 (단일 사용자 기본값)
+    reviewUserId: process.env.REVIEW_USER_ID || 'local-user'
 };
 
 // 필수 환경 변수 검증

@@ -148,10 +148,26 @@ class GameValidator {
             return min > 0 && max > 0 && min <= max && max <= 20;
         }
         
-        // 또는 (예: "3|5")
-        if (/^\d+\|\d+$/.test(value)) {
-            const [num1, num2] = value.split('|').map(n => parseInt(n));
-            return num1 > 0 && num2 > 0 && num1 <= 20 && num2 <= 20;
+        // 또는/콤마/틸드 조합 + 공백 허용 (예: "3|5", "4,6", "2-4,6", "1 ~ 3")
+        if (/^[\d,\-|~\s]+$/.test(value)) {
+            const tokens = value.split(/[|,]/).map(part => part.trim()).filter(Boolean);
+            if (tokens.length === 0) return false;
+
+            return tokens.every(token => {
+                if (/^\d+$/.test(token)) {
+                    const num = parseInt(token);
+                    return num > 0 && num <= 20;
+                }
+                const normalized = token
+                    .replace(/[–—~]/g, '-')
+                    .replace(/\s+/g, '')
+                    .trim();
+                if (/^\d+-\d+$/.test(normalized)) {
+                    const [min, max] = normalized.split('-').map(n => parseInt(n));
+                    return min > 0 && max > 0 && min <= max && max <= 20;
+                }
+                return false;
+            });
         }
         
         return false;

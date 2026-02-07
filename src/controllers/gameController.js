@@ -115,12 +115,12 @@ class GameController {
                 });
             }
 
-            await gameService.addReview(bggId, rating, text);
+            const result = await gameService.addReview(bggId, rating, text);
             
             // 캐시 무효화
             req.cache.clear();
             
-            res.json({ success: true });
+            res.json({ success: true, ...result });
         } catch (error) {
             console.error('리뷰 추가 오류:', error);
             res.status(500).json({ 
@@ -145,8 +145,8 @@ class GameController {
             const review = await gameService.getReview(bggId);
             
             res.json({ 
-                success: true, 
-                review 
+                success: true,
+                review: review || null
             });
         } catch (error) {
             console.error('리뷰 조회 오류:', error);

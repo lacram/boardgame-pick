@@ -46,7 +46,7 @@ function isInRange(searchValue, rangeStr) {
 function parsePlayersToSet(value) {
     if (!value) return [];
 
-    const normalized = value.replace(/[–—]/g, '-').trim();
+    const normalized = value.replace(/[–—~]/g, '-').trim();
     if (!normalized) return [];
 
     const result = new Set();

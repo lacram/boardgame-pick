@@ -16,7 +16,7 @@ class GameService {
         let query = supabase
             .from('boardgames')
             .select(`
-                id, name, korean_name, rating, weight, 
+                id, name, korean_name, rating, weight, my_rating,
                 is_favorite, is_scheduled, players_recommended, 
                 players_best, players_recommended_raw, players_best_raw,
                 bgg_id, main_image_url, url, 
@@ -35,9 +35,9 @@ class GameService {
 
         ({ games, total } = await this._handleRegularSearch(query, page));
 
-        // 리뷰 정보 추가
+        // 표시용 데이터 보정
         if (games.length > 0) {
-            await this._attachReviews(games);
+            this._decorateGames(games);
         }
 
         const totalPages = Math.max(1, Math.ceil(total / config.pageSize));
@@ -93,9 +93,10 @@ class GameService {
      * 정렬 로직 적용
      */
     _applySorting(query, sortBy, sortOrder) {
-        const validSortFields = ['rating', 'weight', 'name'];
-        if (validSortFields.includes(sortBy)) {
-            query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+        const normalizedSortBy = sortBy === 'myRating' ? 'my_rating' : sortBy;
+        const validSortFields = ['rating', 'weight', 'name', 'my_rating'];
+        if (validSortFields.includes(normalizedSortBy)) {
+            query = query.order(normalizedSortBy, { ascending: sortOrder === 'asc' });
         }
         return query;
     }
@@ -121,26 +122,9 @@ class GameService {
     /**
      * 게임에 리뷰 정보 첨부
      */
-    async _attachReviews(games) {
-        const bggIds = games.map(game => game.bgg_id);
-        
-        const { data: reviews } = await supabase
-            .from('reviews')
-            .select('bgg_id, rating')
-            .in('bgg_id', bggIds)
-            .order('created_at', { ascending: false });
-
-        // 리뷰 맵 생성 (가장 최신 리뷰만)
-        const reviewMap = new Map();
-        reviews?.forEach(review => {
-            if (!reviewMap.has(review.bgg_id)) {
-                reviewMap.set(review.bgg_id, review.rating);
-            }
-        });
-
-        // 게임에 리뷰 정보 추가
+    _decorateGames(games) {
         games.forEach(game => {
-            game.myRating = reviewMap.get(game.bgg_id) || null;
+            game.myRating = game.my_rating || null;
             game.displayName = game.korean_name || game.name;
             game.playersRecommendedDisplay = game.players_recommended_raw || game.players_recommended || '';
             game.playersBestDisplay = game.players_best_raw || game.players_best || '';
@@ -183,23 +167,37 @@ class GameService {
      * 리뷰 추가
      */
     async addReview(bggId, rating, text) {
+        const userId = config.reviewUserId;
+
         const { error } = await supabase
             .from('reviews')
-            .insert([{ bgg_id: bggId, rating, text }]);
+            .upsert([{ user_id: userId, bgg_id: bggId, rating, text }], {
+                onConflict: 'user_id,bgg_id'
+            });
 
         if (error) throw error;
+
+        const { error: ratingError } = await supabase
+            .from('boardgames')
+            .update({ my_rating: rating })
+            .eq('bgg_id', bggId);
+
+        if (ratingError) throw ratingError;
         
-        return { success: true };
+        return { success: true, rating, text: text || '' };
     }
 
     /**
      * 리뷰 조회
      */
     async getReview(bggId) {
+        const userId = config.reviewUserId;
+
         const { data, error } = await supabase
             .from('reviews')
             .select('rating, text')
             .eq('bgg_id', bggId)
+            .eq('user_id', userId)
             .order('created_at', { ascending: false })
             .limit(1);
 

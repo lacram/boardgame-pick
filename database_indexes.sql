@@ -11,6 +11,7 @@ ALTER TABLE boardgames
     ADD COLUMN IF NOT EXISTS last_dump_seen_at timestamptz,
     ADD COLUMN IF NOT EXISTS last_detail_sync_at timestamptz,
     ADD COLUMN IF NOT EXISTS detail_sync_status text,
+    ADD COLUMN IF NOT EXISTS my_rating int,
     ADD COLUMN IF NOT EXISTS players_best_raw text,
     ADD COLUMN IF NOT EXISTS players_best_min int,
     ADD COLUMN IF NOT EXISTS players_best_max int,
@@ -63,6 +64,19 @@ CREATE INDEX IF NOT EXISTS idx_boardgames_rank ON boardgames(rank);
 
 -- 11. average_rating 컬럼 인덱스 (정렬 최적화)
 CREATE INDEX IF NOT EXISTS idx_boardgames_average_rating ON boardgames(average_rating DESC);
+
+-- 12. 내 평점 컬럼 인덱스 (정렬 최적화)
+CREATE INDEX IF NOT EXISTS idx_boardgames_my_rating ON boardgames(my_rating DESC);
+
+-- reviews 테이블 사용자 구분
+ALTER TABLE reviews
+    ADD COLUMN IF NOT EXISTS user_id text;
+
+-- 기존 리뷰에 기본 사용자 ID 설정 (필요 시 수정)
+-- UPDATE reviews SET user_id = 'local-user' WHERE user_id IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_reviews_user_bgg
+    ON reviews(user_id, bgg_id);
 
 -- reviews 테이블 인덱스
 
