@@ -6,7 +6,7 @@ const config = {
     nodeEnv: process.env.NODE_ENV || 'development',
     
     // 페이지네이션 설정
-    pageSize: parseInt(process.env.PAGE_SIZE) || 20,
+    pageSize: parseInt(process.env.PAGE_SIZE) || 18,
     defaultSortBy: process.env.DEFAULT_SORT_BY || 'rating',
     defaultSortOrder: process.env.DEFAULT_SORT_ORDER || 'desc',
     
