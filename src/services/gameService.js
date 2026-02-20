@@ -9,7 +9,7 @@ class GameService {
     async getGames(searchParams) {
         const {
             search, searchPlayers, searchBest,
-            weightMin, weightMax, showFavoritesOnly, showScheduledOnly,
+            weightMin, weightMax, showFavoritesOnly, showScheduledOnly, showOwnedOnly,
             sortBy, sortOrder, page
         } = searchParams;
 
@@ -17,7 +17,7 @@ class GameService {
             .from('boardgames')
             .select(`
                 id, name, korean_name, rating, weight, my_rating,
-                is_favorite, is_scheduled, players_recommended, 
+                is_favorite, is_scheduled, is_owned, players_recommended, 
                 players_best, players_recommended_raw, players_best_raw,
                 bgg_id, main_image_url, url, 
                 play_time_min, play_time_max
@@ -25,7 +25,7 @@ class GameService {
 
         // 필터링 적용
         query = this._applyFilters(query, {
-            search, searchPlayers, searchBest, weightMin, weightMax, showFavoritesOnly, showScheduledOnly
+            search, searchPlayers, searchBest, weightMin, weightMax, showFavoritesOnly, showScheduledOnly, showOwnedOnly
         });
 
         // 정렬 적용
@@ -51,7 +51,7 @@ class GameService {
     _applyFilters(query, filters) {
         const {
             search, searchPlayers, searchBest,
-            weightMin, weightMax, showFavoritesOnly, showScheduledOnly
+            weightMin, weightMax, showFavoritesOnly, showScheduledOnly, showOwnedOnly
         } = filters;
 
         if (search) {
@@ -75,15 +75,22 @@ class GameService {
         if (weightMax) {
             query = query.lte('weight', parseFloat(weightMax));
         }
-        if (showFavoritesOnly && showScheduledOnly) {
-            query = query.or('is_favorite.eq.true,is_scheduled.eq.true');
-        } else {
-            if (showFavoritesOnly) {
-                query = query.eq('is_favorite', true);
-            }
-            if (showScheduledOnly) {
-                query = query.eq('is_scheduled', true);
-            }
+        const flagFilters = [];
+        if (showFavoritesOnly) {
+            flagFilters.push('is_favorite.eq.true');
+        }
+        if (showScheduledOnly) {
+            flagFilters.push('is_scheduled.eq.true');
+        }
+        if (showOwnedOnly) {
+            flagFilters.push('is_owned.eq.true');
+        }
+        if (flagFilters.length === 1) {
+            const [filter] = flagFilters;
+            const [column] = filter.split('.');
+            query = query.eq(column, true);
+        } else if (flagFilters.length > 1) {
+            query = query.or(flagFilters.join(','));
         }
 
         return query;
@@ -161,6 +168,22 @@ class GameService {
         if (error) throw error;
         
         return { isScheduled: newScheduled };
+    }
+
+    /**
+     * 보유 토글
+     */
+    async toggleOwned(bggId, currentOwned) {
+        const newOwned = currentOwned ? 0 : 1;
+        
+        const { error } = await supabase
+            .from('boardgames')
+            .update({ is_owned: newOwned })
+            .eq('bgg_id', bggId);
+
+        if (error) throw error;
+        
+        return { isOwned: newOwned };
     }
 
     /**

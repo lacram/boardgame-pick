@@ -47,6 +47,11 @@
                            <%= showScheduledOnly ? 'checked' : '' %>>
                     <label for="scheduled">플레이 예정만</label>
                 </div>
+                <div class="checkbox-container">
+                    <input type="checkbox" name="showOwnedOnly" id="owned" 
+                           <%= showOwnedOnly ? 'checked' : '' %>>
+                    <label for="owned">보유만</label>
+                </div>
                 <select name="sortBy" class="search-input" style="min-width: 120px;">
                     <option value="rating" <%= sortBy === 'rating' ? 'selected' : '' %>>평점순</option>
                     <option value="myRating" <%= sortBy === 'myRating' ? 'selected' : '' %>>내 평점순</option>
@@ -92,6 +97,12 @@
                                     <img src="<%= game.is_scheduled ? '/images/scheduled-on.svg' : '/images/scheduled-off.svg' %>" 
                                          alt="플레이 예정" class="scheduled-icon">
                                 </button>
+                                <button class="owned-button <%= game.is_owned ? 'active' : '' %>" 
+                                        data-rowid="<%= game.bgg_id %>" 
+                                        data-owned="<%= game.is_owned ? 1 : 0 %>">
+                                    <img src="<%= game.is_owned ? '/images/owned-on.svg' : '/images/owned-off.svg' %>" 
+                                         alt="보유" class="owned-icon">
+                                </button>
                             </div>
                         </div>
                         <div class="game-info">
@@ -128,17 +139,17 @@
         <% if (totalPages > 1) { %>
             <div class="pagination">
                 <% if (currentPage > 1) { %>
-                    <a href="?page=<%= currentPage - 1 %>&search=<%= search %>&searchPlayers=<%= searchPlayers %>&searchBest=<%= searchBest %>&weightMin=<%= weightMin %>&weightMax=<%= weightMax %>&showFavoritesOnly=<%= showFavoritesOnly ? 'on' : '' %>&showScheduledOnly=<%= showScheduledOnly ? 'on' : '' %>&sortBy=<%= sortBy %>&sortOrder=<%= sortOrder %>" 
+                    <a href="?page=<%= currentPage - 1 %>&search=<%= search %>&searchPlayers=<%= searchPlayers %>&searchBest=<%= searchBest %>&weightMin=<%= weightMin %>&weightMax=<%= weightMax %>&showFavoritesOnly=<%= showFavoritesOnly ? 'on' : '' %>&showScheduledOnly=<%= showScheduledOnly ? 'on' : '' %>&showOwnedOnly=<%= showOwnedOnly ? 'on' : '' %>&sortBy=<%= sortBy %>&sortOrder=<%= sortOrder %>" 
                        class="page-button">◀ 이전</a>
                 <% } %>
                 
                 <% for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) { %>
-                    <a href="?page=<%= i %>&search=<%= search %>&searchPlayers=<%= searchPlayers %>&searchBest=<%= searchBest %>&weightMin=<%= weightMin %>&weightMax=<%= weightMax %>&showFavoritesOnly=<%= showFavoritesOnly ? 'on' : '' %>&showScheduledOnly=<%= showScheduledOnly ? 'on' : '' %>&sortBy=<%= sortBy %>&sortOrder=<%= sortOrder %>" 
+                    <a href="?page=<%= i %>&search=<%= search %>&searchPlayers=<%= searchPlayers %>&searchBest=<%= searchBest %>&weightMin=<%= weightMin %>&weightMax=<%= weightMax %>&showFavoritesOnly=<%= showFavoritesOnly ? 'on' : '' %>&showScheduledOnly=<%= showScheduledOnly ? 'on' : '' %>&showOwnedOnly=<%= showOwnedOnly ? 'on' : '' %>&sortBy=<%= sortBy %>&sortOrder=<%= sortOrder %>" 
                        class="page-button <%= i === currentPage ? 'active' : '' %>"><%= i %></a>
                 <% } %>
                 
                 <% if (currentPage < totalPages) { %>
-                    <a href="?page=<%= currentPage + 1 %>&search=<%= search %>&searchPlayers=<%= searchPlayers %>&searchBest=<%= searchBest %>&weightMin=<%= weightMin %>&weightMax=<%= weightMax %>&showFavoritesOnly=<%= showFavoritesOnly ? 'on' : '' %>&showScheduledOnly=<%= showScheduledOnly ? 'on' : '' %>&sortBy=<%= sortBy %>&sortOrder=<%= sortOrder %>" 
+                    <a href="?page=<%= currentPage + 1 %>&search=<%= search %>&searchPlayers=<%= searchPlayers %>&searchBest=<%= searchBest %>&weightMin=<%= weightMin %>&weightMax=<%= weightMax %>&showFavoritesOnly=<%= showFavoritesOnly ? 'on' : '' %>&showScheduledOnly=<%= showScheduledOnly ? 'on' : '' %>&showOwnedOnly=<%= showOwnedOnly ? 'on' : '' %>&sortBy=<%= sortBy %>&sortOrder=<%= sortOrder %>" 
                        class="page-button">다음 ▶</a>
                 <% } %>
             </div>

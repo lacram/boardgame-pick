@@ -31,6 +31,16 @@ function initializeEventListeners() {
             toggleScheduled(this, parseInt(rowId), parseInt(currentScheduled));
         });
     });
+
+    // Owned buttons
+    const ownedButtons = document.querySelectorAll('.owned-button');
+    ownedButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const rowId = this.getAttribute('data-rowid');
+            const currentOwned = this.getAttribute('data-owned');
+            toggleOwned(this, parseInt(rowId), parseInt(currentOwned));
+        });
+    });
 }
 
 function initializeModals() {

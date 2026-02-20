@@ -28,6 +28,12 @@ router.post('/toggle-scheduled',
     asyncHandler(gameController.toggleScheduled.bind(gameController))
 );
 
+// 보유 토글
+router.post('/toggle-owned', 
+    validateToggleRequest,
+    asyncHandler(gameController.toggleOwned.bind(gameController))
+);
+
 // 리뷰 추가
 router.post('/add-review', 
     validateReviewRequest,

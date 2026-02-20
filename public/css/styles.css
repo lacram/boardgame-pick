@@ -227,7 +227,7 @@ body {
     flex-shrink: 0;
 }
 
-.favorite-button, .scheduled-button {
+.favorite-button, .scheduled-button, .owned-button {
     background: none;
     border: none;
     font-size: 18px;
@@ -235,6 +235,10 @@ body {
     color: #bbb;
     transition: transform 0.2s ease;
     padding: 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
 }
 
 .favorite-button.active {
@@ -253,6 +257,18 @@ body {
     color: #4CAF50;
 }
 
+.owned-button.active {
+    color: #ff9800;
+}
+
+.owned-button:hover {
+    color: #ff9800;
+}
+
+.owned-button:active {
+    transform: none;
+}
+
 .bookmark-icon {
     width: 22px;
     height: 22px;
@@ -260,6 +276,12 @@ body {
 }
 
 .scheduled-icon {
+    width: 22px;
+    height: 22px;
+    display: block;
+}
+
+.owned-icon {
     width: 22px;
     height: 22px;
     display: block;
@@ -447,6 +469,8 @@ body {
     min-height: 70px;
     color: #2c3647;
     line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 @keyframes modalIn {
@@ -562,7 +586,7 @@ body {
         gap: 4px;
     }
     
-    .favorite-button, .scheduled-button {
+    .favorite-button, .scheduled-button, .owned-button {
         font-size: 16px;
     }
     

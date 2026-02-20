@@ -97,6 +97,33 @@ class GameController {
     }
 
     /**
+     * 보유 토글
+     */
+    async toggleOwned(req, res) {
+        try {
+            const { rowId, currentOwned } = req.body;
+            
+            if (!rowId || currentOwned === undefined) {
+                return res.status(400).json({ 
+                    error: '필수 파라미터가 누락되었습니다.' 
+                });
+            }
+
+            const result = await gameService.toggleOwned(rowId, currentOwned);
+            
+            // 캐시 무효화
+            req.cache.clear();
+            
+            res.json({ success: true, ...result });
+        } catch (error) {
+            console.error('보유 토글 오류:', error);
+            res.status(500).json({ 
+                error: '보유 상태를 변경하는 중 오류가 발생했습니다.' 
+            });
+        }
+    }
+
+    /**
      * 리뷰 추가
      */
     async addReview(req, res) {
@@ -169,6 +196,7 @@ class GameController {
             weightMax: query.weightMax || '',
             showFavoritesOnly: query.showFavoritesOnly === 'on',
             showScheduledOnly: query.showScheduledOnly === 'on',
+            showOwnedOnly: query.showOwnedOnly === 'on',
             sortBy: query.sortBy || config.defaultSortBy,
             sortOrder: query.sortOrder || config.defaultSortOrder
         };
@@ -180,10 +208,10 @@ class GameController {
     _generateCacheKey(params) {
         const { 
             search, searchPlayers, searchBest, weightMin, weightMax,
-            showFavoritesOnly, showScheduledOnly, sortBy, sortOrder, page 
+            showFavoritesOnly, showScheduledOnly, showOwnedOnly, sortBy, sortOrder, page 
         } = params;
         
-        return `${search}-${searchPlayers}-${searchBest}-${weightMin}-${weightMax}-${showFavoritesOnly}-${showScheduledOnly}-${sortBy}-${sortOrder}-${page}`;
+        return `${search}-${searchPlayers}-${searchBest}-${weightMin}-${weightMax}-${showFavoritesOnly}-${showScheduledOnly}-${showOwnedOnly}-${sortBy}-${sortOrder}-${page}`;
     }
 
     /**
@@ -198,6 +226,7 @@ class GameController {
             weightMax: params.weightMax,
             showFavoritesOnly: params.showFavoritesOnly,
             showScheduledOnly: params.showScheduledOnly,
+            showOwnedOnly: params.showOwnedOnly,
             sortBy: params.sortBy,
             sortOrder: params.sortOrder
         };

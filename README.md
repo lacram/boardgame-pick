@@ -7,6 +7,7 @@
 - 📋 BoardGameGeek 데이터 기반 보드게임 검색 및 필터링
 - ⭐ 즐겨찾기 관리
 - ◆ 플레이 예정 관리
+- 📦 보유 게임 관리
 - 👥 인원수별 검색 (복잡한 범위 검색 지원: "2-4", "3|5")
 - 🎯 난이도(Weight) 필터링
 - 📝 개인 평점 및 리뷰 시스템
@@ -54,6 +55,9 @@ Supabase에서 다음 SQL을 실행하여 스키마를 생성하세요:
 ```sql
 -- 플레이 예정 컬럼 추가
 ALTER TABLE boardgames ADD COLUMN is_scheduled BOOLEAN DEFAULT FALSE;
+
+-- 보유 컬럼 추가
+ALTER TABLE boardgames ADD COLUMN is_owned BOOLEAN DEFAULT FALSE;
 
 -- 인덱스 생성 (성능 최적화)
 -- database_indexes.sql 파일의 내용을 실행
