@@ -1,5 +1,6 @@
 const express = require('express');
 const gameController = require('../controllers/gameController');
+const userController = require('../controllers/userController');
 const { asyncHandler } = require('../middleware/errorMiddleware');
 const {
     validateSearchParams,
@@ -22,10 +23,16 @@ router.post('/toggle-favorite',
     asyncHandler(gameController.toggleFavorite.bind(gameController))
 );
 
-// 플레이 예정 토글
-router.post('/toggle-scheduled', 
+// 위시리스트 토글
+router.post('/toggle-wishlist', 
     validateToggleRequest,
-    asyncHandler(gameController.toggleScheduled.bind(gameController))
+    asyncHandler(gameController.toggleWishlist.bind(gameController))
+);
+
+// 플레이 예정 토글
+router.post('/toggle-planned', 
+    validateToggleRequest,
+    asyncHandler(gameController.togglePlanned.bind(gameController))
 );
 
 // 보유 토글
@@ -44,6 +51,26 @@ router.post('/add-review',
 router.get('/get-review', 
     validateReviewQuery,
     asyncHandler(gameController.getReview.bind(gameController))
+);
+
+// 유저 목록
+router.get('/users', 
+    asyncHandler(userController.listUsers.bind(userController))
+);
+
+// 유저 추가
+router.post('/users/add', 
+    asyncHandler(userController.addUser.bind(userController))
+);
+
+// 유저 변경
+router.post('/users/select', 
+    asyncHandler(userController.selectUser.bind(userController))
+);
+
+// 마이페이지
+router.get('/mypage',
+    asyncHandler(userController.myPage.bind(userController))
 );
 
 module.exports = router;

@@ -63,7 +63,7 @@ class GameValidator {
             errors.push('게임 ID는 양의 정수여야 합니다.');
         }
 
-        if (body.currentFav === undefined && body.currentScheduled === undefined && body.currentOwned === undefined) {
+        if (body.currentFav === undefined && body.currentWishlist === undefined && body.currentOwned === undefined && body.currentPlanned === undefined) {
             errors.push('현재 상태값이 필요합니다.');
         }
 

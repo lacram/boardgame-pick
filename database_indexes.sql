@@ -99,6 +99,52 @@ CREATE INDEX IF NOT EXISTS idx_reviews_created_at ON reviews(created_at DESC);
 -- 12. 복합 인덱스: bgg_id + created_at (가장 최신 리뷰 조회 최적화)
 CREATE INDEX IF NOT EXISTS idx_reviews_bgg_id_created_at ON reviews(bgg_id, created_at DESC);
 
+-- app_users 테이블 (간단한 유저 목록)
+CREATE TABLE IF NOT EXISTS app_users (
+    id text PRIMARY KEY,
+    created_at timestamptz DEFAULT now()
+);
+
+-- user_data 테이블 (유저별 즐겨찾기/보유/플레이 예정/내 평점)
+CREATE TABLE IF NOT EXISTS user_data (
+    id bigserial PRIMARY KEY,
+    user_id text NOT NULL,
+    bgg_id int NOT NULL,
+    is_favorite boolean DEFAULT false,
+    is_wishlist boolean DEFAULT false,
+    is_owned boolean DEFAULT false,
+    is_planned boolean DEFAULT false,
+    my_rating int,
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
+);
+
+-- 기존 테이블 보정 (컬럼 추가)
+ALTER TABLE user_data
+    ADD COLUMN IF NOT EXISTS is_wishlist boolean DEFAULT false,
+    ADD COLUMN IF NOT EXISTS is_planned boolean DEFAULT false;
+
+-- 기존 is_scheduled가 있었다면 위시리스트로 이관
+-- UPDATE user_data SET is_wishlist = is_scheduled WHERE is_scheduled = true;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_data_user_bgg
+    ON user_data(user_id, bgg_id);
+
+CREATE INDEX IF NOT EXISTS idx_user_data_user_favorite
+    ON user_data(user_id, is_favorite);
+
+CREATE INDEX IF NOT EXISTS idx_user_data_user_scheduled
+    ON user_data(user_id, is_wishlist);
+
+CREATE INDEX IF NOT EXISTS idx_user_data_user_owned
+    ON user_data(user_id, is_owned);
+
+CREATE INDEX IF NOT EXISTS idx_user_data_user_planned
+    ON user_data(user_id, is_planned);
+
+CREATE INDEX IF NOT EXISTS idx_user_data_user_rating
+    ON user_data(user_id, my_rating DESC);
+
 -- 인덱스 생성 확인 쿼리
 SELECT 
     schemaname,

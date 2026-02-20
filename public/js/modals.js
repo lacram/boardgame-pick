@@ -85,6 +85,11 @@ function saveRating() {
             const reviewButton = document.getElementById(`reviewButton-${currentBggId}`);
             if (reviewButton) reviewButton.style.display = 'inline-flex';
 
+            if (document.querySelector('.mypage-section')) {
+                window.location.reload();
+                return;
+            }
+
             alert('평점이 저장되었습니다!');
         }
     })

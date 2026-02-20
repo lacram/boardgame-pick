@@ -5,6 +5,7 @@ const config = require('../config');
 // 미들웨어
 const { cacheMiddleware, destroyCache } = require('../src/middleware/cacheMiddleware');
 const { notFoundHandler, errorHandler } = require('../src/middleware/errorMiddleware');
+const { userMiddleware } = require('../src/middleware/userMiddleware');
 
 // 라우터
 const gameRoutes = require('../src/routes/gameRoutes');
@@ -20,6 +21,7 @@ app.use(express.json());
 
 // 커스텀 미들웨어
 app.use(cacheMiddleware);
+app.use(userMiddleware);
 
 // 라우터 연결
 app.use('/', gameRoutes);

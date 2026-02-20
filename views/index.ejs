@@ -11,13 +11,34 @@
 <body>
     <div class="container">
         <header class="header">
-            <div class="brand">
+            <a href="/" class="brand">
                 <div class="brand-mark" aria-hidden="true">
                     <div class="brand-dice">🎲</div>
                 </div>
                 <div class="brand-text">
                     <h1 class="brand-title">Boardgame Pick</h1>
                     <p class="brand-subtitle">보드게임 취향을 빠르게 발견하는 스마트 큐레이션</p>
+                </div>
+            </a>
+            <div class="header-actions">
+                <div class="user-menu">
+                <button id="userMenuButton" class="user-button" aria-haspopup="true" aria-expanded="false">
+                    <span class="user-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="8" r="3.5" stroke="#1B365D" stroke-width="1.6"/>
+                            <path d="M5 19.5C5.8 16.5 8.6 14.5 12 14.5C15.4 14.5 18.2 16.5 19 19.5" stroke="#1B365D" stroke-width="1.6" stroke-linecap="round"/>
+                        </svg>
+                    </span>
+                    <span id="currentUserLabel" class="user-label"><%= currentUserId %></span>
+                </button>
+                <div id="userMenuDropdown" class="user-dropdown" hidden>
+                    <div class="user-dropdown-title">유저 선택</div>
+                    <div id="userList" class="user-list"></div>
+                    <div class="user-add">
+                        <input type="text" id="newUserId" class="user-input" placeholder="새 유저 ID (영문/숫자/_/-)">
+                        <button id="addUserButton" class="user-add-button">추가</button>
+                    </div>
+                </div>
                 </div>
             </div>
         </header>
@@ -43,14 +64,19 @@
                     <label for="favorites">즐겨찾기만</label>
                 </div>
                 <div class="checkbox-container">
-                    <input type="checkbox" name="showScheduledOnly" id="scheduled" 
-                           <%= showScheduledOnly ? 'checked' : '' %>>
-                    <label for="scheduled">플레이 예정만</label>
+                    <input type="checkbox" name="showWishlistOnly" id="wishlist" 
+                           <%= showWishlistOnly ? 'checked' : '' %>>
+                    <label for="wishlist">위시리스트만</label>
                 </div>
                 <div class="checkbox-container">
                     <input type="checkbox" name="showOwnedOnly" id="owned" 
                            <%= showOwnedOnly ? 'checked' : '' %>>
                     <label for="owned">보유만</label>
+                </div>
+                <div class="checkbox-container">
+                    <input type="checkbox" name="showPlannedOnly" id="planned" 
+                           <%= showPlannedOnly ? 'checked' : '' %>>
+                    <label for="planned">플레이 예정만</label>
                 </div>
                 <select name="sortBy" class="search-input" style="min-width: 120px;">
                     <option value="rating" <%= sortBy === 'rating' ? 'selected' : '' %>>평점순</option>
@@ -91,11 +117,17 @@
                                     <img src="<%= game.is_favorite ? '/images/bookmark-on.svg' : '/images/bookmark-off.svg' %>" 
                                          alt="즐겨찾기" class="bookmark-icon">
                                 </button>
-                                <button class="scheduled-button <%= game.is_scheduled ? 'active' : '' %>" 
+                                <button class="wishlist-button <%= game.is_wishlist ? 'active' : '' %>" 
                                         data-rowid="<%= game.bgg_id %>" 
-                                        data-scheduled="<%= game.is_scheduled ? 1 : 0 %>">
-                                    <img src="<%= game.is_scheduled ? '/images/scheduled-on.svg' : '/images/scheduled-off.svg' %>" 
-                                         alt="플레이 예정" class="scheduled-icon">
+                                        data-wishlist="<%= game.is_wishlist ? 1 : 0 %>">
+                                    <img src="<%= game.is_wishlist ? '/images/wishlist-on.svg' : '/images/wishlist-off.svg' %>" 
+                                         alt="위시리스트" class="wishlist-icon">
+                                </button>
+                                <button class="planned-button <%= game.is_planned ? 'active' : '' %>" 
+                                        data-rowid="<%= game.bgg_id %>" 
+                                        data-planned="<%= game.is_planned ? 1 : 0 %>">
+                                    <img src="<%= game.is_planned ? '/images/planned-on.svg' : '/images/planned-off.svg' %>" 
+                                         alt="플레이 예정" class="planned-icon">
                                 </button>
                                 <button class="owned-button <%= game.is_owned ? 'active' : '' %>" 
                                         data-rowid="<%= game.bgg_id %>" 
@@ -139,17 +171,17 @@
         <% if (totalPages > 1) { %>
             <div class="pagination">
                 <% if (currentPage > 1) { %>
-                    <a href="?page=<%= currentPage - 1 %>&search=<%= search %>&searchPlayers=<%= searchPlayers %>&searchBest=<%= searchBest %>&weightMin=<%= weightMin %>&weightMax=<%= weightMax %>&showFavoritesOnly=<%= showFavoritesOnly ? 'on' : '' %>&showScheduledOnly=<%= showScheduledOnly ? 'on' : '' %>&showOwnedOnly=<%= showOwnedOnly ? 'on' : '' %>&sortBy=<%= sortBy %>&sortOrder=<%= sortOrder %>" 
+                    <a href="?page=<%= currentPage - 1 %>&search=<%= search %>&searchPlayers=<%= searchPlayers %>&searchBest=<%= searchBest %>&weightMin=<%= weightMin %>&weightMax=<%= weightMax %>&showFavoritesOnly=<%= showFavoritesOnly ? 'on' : '' %>&showWishlistOnly=<%= showWishlistOnly ? 'on' : '' %>&showOwnedOnly=<%= showOwnedOnly ? 'on' : '' %>&showPlannedOnly=<%= showPlannedOnly ? 'on' : '' %>&sortBy=<%= sortBy %>&sortOrder=<%= sortOrder %>" 
                        class="page-button">◀ 이전</a>
                 <% } %>
                 
                 <% for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) { %>
-                    <a href="?page=<%= i %>&search=<%= search %>&searchPlayers=<%= searchPlayers %>&searchBest=<%= searchBest %>&weightMin=<%= weightMin %>&weightMax=<%= weightMax %>&showFavoritesOnly=<%= showFavoritesOnly ? 'on' : '' %>&showScheduledOnly=<%= showScheduledOnly ? 'on' : '' %>&showOwnedOnly=<%= showOwnedOnly ? 'on' : '' %>&sortBy=<%= sortBy %>&sortOrder=<%= sortOrder %>" 
+                    <a href="?page=<%= i %>&search=<%= search %>&searchPlayers=<%= searchPlayers %>&searchBest=<%= searchBest %>&weightMin=<%= weightMin %>&weightMax=<%= weightMax %>&showFavoritesOnly=<%= showFavoritesOnly ? 'on' : '' %>&showWishlistOnly=<%= showWishlistOnly ? 'on' : '' %>&showOwnedOnly=<%= showOwnedOnly ? 'on' : '' %>&showPlannedOnly=<%= showPlannedOnly ? 'on' : '' %>&sortBy=<%= sortBy %>&sortOrder=<%= sortOrder %>" 
                        class="page-button <%= i === currentPage ? 'active' : '' %>"><%= i %></a>
                 <% } %>
                 
                 <% if (currentPage < totalPages) { %>
-                    <a href="?page=<%= currentPage + 1 %>&search=<%= search %>&searchPlayers=<%= searchPlayers %>&searchBest=<%= searchBest %>&weightMin=<%= weightMin %>&weightMax=<%= weightMax %>&showFavoritesOnly=<%= showFavoritesOnly ? 'on' : '' %>&showScheduledOnly=<%= showScheduledOnly ? 'on' : '' %>&showOwnedOnly=<%= showOwnedOnly ? 'on' : '' %>&sortBy=<%= sortBy %>&sortOrder=<%= sortOrder %>" 
+                    <a href="?page=<%= currentPage + 1 %>&search=<%= search %>&searchPlayers=<%= searchPlayers %>&searchBest=<%= searchBest %>&weightMin=<%= weightMin %>&weightMax=<%= weightMax %>&showFavoritesOnly=<%= showFavoritesOnly ? 'on' : '' %>&showWishlistOnly=<%= showWishlistOnly ? 'on' : '' %>&showOwnedOnly=<%= showOwnedOnly ? 'on' : '' %>&showPlannedOnly=<%= showPlannedOnly ? 'on' : '' %>&sortBy=<%= sortBy %>&sortOrder=<%= sortOrder %>" 
                        class="page-button">다음 ▶</a>
                 <% } %>
             </div>
@@ -210,5 +242,6 @@
     <script src="/js/main.js"></script>
     <script src="/js/toggles.js"></script>
     <script src="/js/modals.js"></script>
+    <script src="/js/users.js"></script>
 </body>
 </html> 

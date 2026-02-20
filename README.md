@@ -11,6 +11,7 @@
 - 👥 인원수별 검색 (복잡한 범위 검색 지원: "2-4", "3|5")
 - 🎯 난이도(Weight) 필터링
 - 📝 개인 평점 및 리뷰 시스템
+- 👤 간단 유저 전환 (유저별 즐겨찾기/위시리스트/보유/플레이 예정/내 평점)
 - 📱 반응형 디자인
 
 ## 기술 스택
@@ -58,6 +59,32 @@ ALTER TABLE boardgames ADD COLUMN is_scheduled BOOLEAN DEFAULT FALSE;
 
 -- 보유 컬럼 추가
 ALTER TABLE boardgames ADD COLUMN is_owned BOOLEAN DEFAULT FALSE;
+
+-- 유저 목록 테이블
+CREATE TABLE IF NOT EXISTS app_users (
+    id text PRIMARY KEY,
+    created_at timestamptz DEFAULT now()
+);
+
+-- 유저별 데이터 테이블
+CREATE TABLE IF NOT EXISTS user_data (
+    id bigserial PRIMARY KEY,
+    user_id text NOT NULL,
+    bgg_id int NOT NULL,
+    is_favorite boolean DEFAULT false,
+    is_wishlist boolean DEFAULT false,
+    is_owned boolean DEFAULT false,
+    is_planned boolean DEFAULT false,
+    my_rating int,
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_data_user_bgg
+    ON user_data(user_id, bgg_id);
+
+-- 기존 is_scheduled 데이터가 있다면 위시리스트로 이관
+-- UPDATE user_data SET is_wishlist = is_scheduled WHERE is_scheduled = true;
 
 -- 인덱스 생성 (성능 최적화)
 -- database_indexes.sql 파일의 내용을 실행

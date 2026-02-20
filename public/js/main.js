@@ -22,13 +22,23 @@ function initializeEventListeners() {
         });
     });
 
-    // Scheduled buttons
-    const scheduledButtons = document.querySelectorAll('.scheduled-button');
-    scheduledButtons.forEach(button => {
+    // Wishlist buttons
+    const wishlistButtons = document.querySelectorAll('.wishlist-button');
+    wishlistButtons.forEach(button => {
         button.addEventListener('click', function() {
             const rowId = this.getAttribute('data-rowid');
-            const currentScheduled = this.getAttribute('data-scheduled');
-            toggleScheduled(this, parseInt(rowId), parseInt(currentScheduled));
+            const currentWishlist = this.getAttribute('data-wishlist');
+            toggleWishlist(this, parseInt(rowId), parseInt(currentWishlist));
+        });
+    });
+
+    // Planned buttons
+    const plannedButtons = document.querySelectorAll('.planned-button');
+    plannedButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const rowId = this.getAttribute('data-rowid');
+            const currentPlanned = this.getAttribute('data-planned');
+            togglePlanned(this, parseInt(rowId), parseInt(currentPlanned));
         });
     });
 

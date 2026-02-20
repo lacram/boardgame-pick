@@ -1,4 +1,4 @@
-// Toggle functionality for favorites, scheduled, and owned games
+// Toggle functionality for favorites, wishlist, planned, and owned games
 
 function toggleFavorite(button, rowId, currentFav) {
     const requestData = {
@@ -44,16 +44,16 @@ function toggleFavorite(button, rowId, currentFav) {
     });
 }
 
-function toggleScheduled(button, rowId, currentScheduled) {
+function toggleWishlist(button, rowId, currentWishlist) {
     const requestData = {
         rowId: rowId,
-        currentScheduled: currentScheduled
+        currentWishlist: currentWishlist
     };
     
     // 버튼 비활성화
     button.disabled = true;
     
-    fetch('/toggle-scheduled', {
+    fetch('/toggle-wishlist', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -65,14 +65,58 @@ function toggleScheduled(button, rowId, currentScheduled) {
         if (data.success) {
             // 버튼 상태만 업데이트
             const icon = button.querySelector('img');
-            if (data.isScheduled) {
-                if (icon) icon.src = '/images/scheduled-on.svg';
+            if (data.isWishlist) {
+                if (icon) icon.src = '/images/wishlist-on.svg';
                 button.classList.add('active');
-                button.setAttribute('data-scheduled', '1');
+                button.setAttribute('data-wishlist', '1');
             } else {
-                if (icon) icon.src = '/images/scheduled-off.svg';
+                if (icon) icon.src = '/images/wishlist-off.svg';
                 button.classList.remove('active');
-                button.setAttribute('data-scheduled', '0');
+                button.setAttribute('data-wishlist', '0');
+            }
+        } else {
+            alert('위시리스트 업데이트 실패');
+        }
+    })
+    .catch(error => {
+        console.error('위시리스트 토글 에러:', error);
+        alert('위시리스트 토글 중 오류가 발생했습니다.');
+    })
+    .finally(() => {
+        // 버튼 다시 활성화
+        button.disabled = false;
+    });
+}
+
+function togglePlanned(button, rowId, currentPlanned) {
+    const requestData = {
+        rowId: rowId,
+        currentPlanned: currentPlanned
+    };
+    
+    // 버튼 비활성화
+    button.disabled = true;
+    
+    fetch('/toggle-planned', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 버튼 상태만 업데이트
+            const icon = button.querySelector('img');
+            if (data.isPlanned) {
+                if (icon) icon.src = '/images/planned-on.svg';
+                button.classList.add('active');
+                button.setAttribute('data-planned', '1');
+            } else {
+                if (icon) icon.src = '/images/planned-off.svg';
+                button.classList.remove('active');
+                button.setAttribute('data-planned', '0');
             }
         } else {
             alert('플레이 예정 업데이트 실패');

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boardgame Pick - My Page</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <a href="/" class="brand">
+                <div class="brand-mark" aria-hidden="true">
+                    <div class="brand-dice">🎲</div>
+                </div>
+                <div class="brand-text">
+                    <h1 class="brand-title">Boardgame Pick</h1>
+                    <p class="brand-subtitle">보드게임 취향을 빠르게 발견하는 스마트 큐레이션</p>
+                </div>
+            </a>
+            <div class="header-actions">
+                <div class="user-menu">
+                <button id="userMenuButton" class="user-button" aria-haspopup="true" aria-expanded="false">
+                    <span class="user-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="8" r="3.5" stroke="#1B365D" stroke-width="1.6"/>
+                            <path d="M5 19.5C5.8 16.5 8.6 14.5 12 14.5C15.4 14.5 18.2 16.5 19 19.5" stroke="#1B365D" stroke-width="1.6" stroke-linecap="round"/>
+                        </svg>
+                    </span>
+                    <span id="currentUserLabel" class="user-label"><%= currentUserId %></span>
+                </button>
+                <div id="userMenuDropdown" class="user-dropdown" hidden>
+                    <div class="user-dropdown-title">유저 선택</div>
+                    <div id="userList" class="user-list"></div>
+                    <div class="user-add">
+                        <input type="text" id="newUserId" class="user-input" placeholder="새 유저 ID (영문/숫자/_/-)">
+                        <button id="addUserButton" class="user-add-button">추가</button>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </header>
+
+        <section class="mypage-section">
+            <div class="mypage-tabs" role="tablist">
+                <button class="mypage-tab active" role="tab" data-tab="favorites">즐겨찾기</button>
+                <button class="mypage-tab" role="tab" data-tab="wishlist">위시리스트</button>
+                <button class="mypage-tab" role="tab" data-tab="owned">보유중</button>
+                <button class="mypage-tab" role="tab" data-tab="planned">플레이 예정</button>
+                <button class="mypage-tab" role="tab" data-tab="reviews">리뷰</button>
+            </div>
+
+            <div class="mypage-panel active" data-panel="favorites">
+                <% if (favorites.length === 0) { %>
+                    <div class="mypage-empty">아직 즐겨찾기한 게임이 없습니다.</div>
+                <% } else { %>
+                    <div class="mypage-grid">
+                        <% favorites.forEach(function(game) { %>
+                            <div class="mypage-card">
+                                <% if (game.main_image_url) { %>
+                                    <img src="<%= game.main_image_url %>" alt="<%= game.displayName %>" class="mypage-image">
+                                <% } %>
+                                <div class="mypage-content">
+                                    <a href="<%= game.url %>" target="_blank" class="mypage-name"><%= game.displayName %></a>
+                                    <div class="mypage-meta">🌟 <%= game.rating || 0 %> | 난이도 <%= game.weight || 0 %></div>
+                                    <% if (game.myRating) { %>
+                                        <div class="mypage-meta">내 평점 <strong><%= game.myRating %></strong></div>
+                                    <% } %>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                <% } %>
+            </div>
+
+            <div class="mypage-panel" data-panel="wishlist">
+                <% if (wishlist.length === 0) { %>
+                    <div class="mypage-empty">아직 위시리스트에 담긴 게임이 없습니다.</div>
+                <% } else { %>
+                    <div class="mypage-grid">
+                        <% wishlist.forEach(function(game) { %>
+                            <div class="mypage-card">
+                                <% if (game.main_image_url) { %>
+                                    <img src="<%= game.main_image_url %>" alt="<%= game.displayName %>" class="mypage-image">
+                                <% } %>
+                                <div class="mypage-content">
+                                    <a href="<%= game.url %>" target="_blank" class="mypage-name"><%= game.displayName %></a>
+                                    <div class="mypage-meta">🌟 <%= game.rating || 0 %> | 난이도 <%= game.weight || 0 %></div>
+                                    <% if (game.myRating) { %>
+                                        <div class="mypage-meta">내 평점 <strong><%= game.myRating %></strong></div>
+                                    <% } %>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                <% } %>
+            </div>
+
+            <div class="mypage-panel" data-panel="owned">
+                <% if (owned.length === 0) { %>
+                    <div class="mypage-empty">아직 보유중인 게임이 없습니다.</div>
+                <% } else { %>
+                    <div class="mypage-grid">
+                        <% owned.forEach(function(game) { %>
+                            <div class="mypage-card">
+                                <% if (game.main_image_url) { %>
+                                    <img src="<%= game.main_image_url %>" alt="<%= game.displayName %>" class="mypage-image">
+                                <% } %>
+                                <div class="mypage-content">
+                                    <a href="<%= game.url %>" target="_blank" class="mypage-name"><%= game.displayName %></a>
+                                    <div class="mypage-meta">🌟 <%= game.rating || 0 %> | 난이도 <%= game.weight || 0 %></div>
+                                    <% if (game.myRating) { %>
+                                        <div class="mypage-meta">내 평점 <strong><%= game.myRating %></strong></div>
+                                    <% } %>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                <% } %>
+            </div>
+
+            <div class="mypage-panel" data-panel="planned">
+                <% if (planned.length === 0) { %>
+                    <div class="mypage-empty">아직 플레이 예정으로 저장된 게임이 없습니다.</div>
+                <% } else { %>
+                    <div class="mypage-grid">
+                        <% planned.forEach(function(game) { %>
+                            <div class="mypage-card">
+                                <% if (game.main_image_url) { %>
+                                    <img src="<%= game.main_image_url %>" alt="<%= game.displayName %>" class="mypage-image">
+                                <% } %>
+                                <div class="mypage-content">
+                                    <a href="<%= game.url %>" target="_blank" class="mypage-name"><%= game.displayName %></a>
+                                    <div class="mypage-meta">🌟 <%= game.rating || 0 %> | 난이도 <%= game.weight || 0 %></div>
+                                    <% if (game.myRating) { %>
+                                        <div class="mypage-meta">내 평점 <strong><%= game.myRating %></strong></div>
+                                    <% } %>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                <% } %>
+            </div>
+
+            <div class="mypage-panel" data-panel="reviews">
+                <% if (reviews.length === 0) { %>
+                    <div class="mypage-empty">아직 작성한 리뷰가 없습니다.</div>
+                <% } else { %>
+                    <div class="mypage-grid">
+                        <% reviews.forEach(function(review) { %>
+                            <div class="mypage-card">
+                                <% if (review.main_image_url) { %>
+                                    <img src="<%= review.main_image_url %>" alt="<%= review.displayName %>" class="mypage-image">
+                                <% } %>
+                                <div class="mypage-content">
+                                    <a href="<%= review.url %>" target="_blank" class="mypage-name"><%= review.displayName %></a>
+                                    <div class="mypage-meta">🌟 <%= review.gameRating || 0 %> | 난이도 <%= review.weight || 0 %></div>
+                                    <div class="mypage-meta">리뷰 평점 <strong><%= review.reviewRating %></strong></div>
+                                    <div class="mypage-review-text"><%= review.text || '리뷰가 없습니다.' %></div>
+                                    <button class="mypage-edit-button" onclick="openRatingModal(<%= review.bgg_id %>)" data-game-name="<%= review.displayName %>">리뷰 수정</button>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                <% } %>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- 평점 입력 모달 -->
+    <div id="ratingModal" class="rating-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">내 평점 남기기</div>
+                <button class="modal-close" onclick="closeRatingModal()" aria-label="닫기">✕</button>
+            </div>
+            <div class="rating-text" id="ratingText">별점을 선택해주세요</div>
+            <div class="star-rating">
+                <span class="star" onclick="selectRating(1)">☆</span>
+                <span class="star" onclick="selectRating(2)">☆</span>
+                <span class="star" onclick="selectRating(3)">☆</span>
+                <span class="star" onclick="selectRating(4)">☆</span>
+                <span class="star" onclick="selectRating(5)">☆</span>
+                <span class="star" onclick="selectRating(6)">☆</span>
+                <span class="star" onclick="selectRating(7)">☆</span>
+                <span class="star" onclick="selectRating(8)">☆</span>
+                <span class="star" onclick="selectRating(9)">☆</span>
+                <span class="star" onclick="selectRating(10)">☆</span>
+            </div>
+            <textarea id="reviewText" class="review-input" placeholder="리뷰를 작성해주세요 (선택사항)"></textarea>
+            <div class="modal-buttons">
+                <button class="modal-button secondary" onclick="closeRatingModal()">취소</button>
+                <button class="modal-button primary" onclick="saveRating()">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/users.js"></script>
+    <script src="/js/main.js"></script>
+    <script src="/js/modals.js"></script>
+</body>
+</html>

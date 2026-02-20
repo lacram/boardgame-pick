@@ -6,36 +6,90 @@ class GameService {
     /**
      * 게임 목록을 가져오는 메인 서비스 함수
      */
-    async getGames(searchParams) {
+    async getGames(searchParams, userId) {
         const {
             search, searchPlayers, searchBest,
-            weightMin, weightMax, showFavoritesOnly, showScheduledOnly, showOwnedOnly,
+            weightMin, weightMax, showFavoritesOnly, showWishlistOnly, showOwnedOnly, showPlannedOnly,
             sortBy, sortOrder, page
         } = searchParams;
+
+        let userFilteredIds = null;
+        const hasFlagFilters = showFavoritesOnly || showWishlistOnly || showOwnedOnly || showPlannedOnly;
+
+        if (hasFlagFilters) {
+            const flagFilters = [];
+            if (showFavoritesOnly) flagFilters.push('is_favorite.eq.true');
+            if (showWishlistOnly) flagFilters.push('is_wishlist.eq.true');
+            if (showOwnedOnly) flagFilters.push('is_owned.eq.true');
+            if (showPlannedOnly) flagFilters.push('is_planned.eq.true');
+
+            let userQuery = supabase
+                .from('user_data')
+                .select('bgg_id')
+                .eq('user_id', userId);
+
+            if (flagFilters.length > 1) {
+                userQuery = userQuery.or(flagFilters.join(','));
+            } else if (flagFilters.length === 1) {
+                const [filter] = flagFilters;
+                const [column] = filter.split('.');
+                userQuery = userQuery.eq(column, true);
+            }
+
+            const { data: userRows, error: userError } = await userQuery;
+            if (userError) throw userError;
+            userFilteredIds = (userRows || []).map(row => row.bgg_id);
+
+            if (userFilteredIds.length === 0) {
+                return { games: [], total: 0, totalPages: 1 };
+            }
+        }
+
+        const needsMyRatingSort = sortBy === 'myRating';
 
         let query = supabase
             .from('boardgames')
             .select(`
-                id, name, korean_name, rating, weight, my_rating,
-                is_favorite, is_scheduled, is_owned, players_recommended, 
-                players_best, players_recommended_raw, players_best_raw,
+                id, name, korean_name, rating, weight,
+                players_recommended, players_best, players_recommended_raw, players_best_raw,
                 bgg_id, main_image_url, url, 
                 play_time_min, play_time_max
-            `, { count: 'exact' });
+            `, { count: needsMyRatingSort ? 'exact' : 'exact' });
 
-        // 필터링 적용
         query = this._applyFilters(query, {
-            search, searchPlayers, searchBest, weightMin, weightMax, showFavoritesOnly, showScheduledOnly, showOwnedOnly
+            search, searchPlayers, searchBest, weightMin, weightMax
         });
 
-        // 정렬 적용
-        query = this._applySorting(query, sortBy, sortOrder);
+        if (userFilteredIds) {
+            query = query.in('bgg_id', userFilteredIds);
+        }
+
+        if (!needsMyRatingSort) {
+            query = this._applySorting(query, sortBy, sortOrder);
+        }
 
         let games, total;
 
-        ({ games, total } = await this._handleRegularSearch(query, page));
+        if (needsMyRatingSort) {
+            ({ games, total } = await this._handleFullSearch(query));
+        } else {
+            ({ games, total } = await this._handleRegularSearch(query, page));
+        }
 
-        // 표시용 데이터 보정
+        if (games.length === 0) {
+            return { games: [], total: 0, totalPages: 1 };
+        }
+
+        const userDataMap = await this._getUserDataMap(userId, games.map(game => game.bgg_id));
+        this._mergeUserData(games, userDataMap);
+
+        if (needsMyRatingSort) {
+            games = this._sortByMyRating(games, sortOrder);
+            const from = (page - 1) * config.pageSize;
+            const to = from + config.pageSize;
+            games = games.slice(from, to);
+        }
+
         if (games.length > 0) {
             this._decorateGames(games);
         }
@@ -51,7 +105,7 @@ class GameService {
     _applyFilters(query, filters) {
         const {
             search, searchPlayers, searchBest,
-            weightMin, weightMax, showFavoritesOnly, showScheduledOnly, showOwnedOnly
+            weightMin, weightMax
         } = filters;
 
         if (search) {
@@ -75,24 +129,6 @@ class GameService {
         if (weightMax) {
             query = query.lte('weight', parseFloat(weightMax));
         }
-        const flagFilters = [];
-        if (showFavoritesOnly) {
-            flagFilters.push('is_favorite.eq.true');
-        }
-        if (showScheduledOnly) {
-            flagFilters.push('is_scheduled.eq.true');
-        }
-        if (showOwnedOnly) {
-            flagFilters.push('is_owned.eq.true');
-        }
-        if (flagFilters.length === 1) {
-            const [filter] = flagFilters;
-            const [column] = filter.split('.');
-            query = query.eq(column, true);
-        } else if (flagFilters.length > 1) {
-            query = query.or(flagFilters.join(','));
-        }
-
         return query;
     }
 
@@ -126,6 +162,58 @@ class GameService {
         };
     }
 
+    async _handleFullSearch(query) {
+        const { data, error, count } = await query;
+
+        if (error) throw error;
+
+        return {
+            games: data || [],
+            total: count || 0
+        };
+    }
+
+    async _getUserDataMap(userId, bggIds) {
+        if (!bggIds || bggIds.length === 0) return new Map();
+
+        const { data, error } = await supabase
+            .from('user_data')
+            .select('bgg_id, is_favorite, is_wishlist, is_owned, is_planned, my_rating')
+            .eq('user_id', userId)
+            .in('bgg_id', bggIds);
+
+        if (error) throw error;
+
+        const map = new Map();
+        (data || []).forEach(row => {
+            map.set(row.bgg_id, row);
+        });
+        return map;
+    }
+
+    _mergeUserData(games, userDataMap) {
+        games.forEach(game => {
+            const userData = userDataMap.get(game.bgg_id);
+            game.is_favorite = userData?.is_favorite || false;
+            game.is_wishlist = userData?.is_wishlist || false;
+            game.is_owned = userData?.is_owned || false;
+            game.is_planned = userData?.is_planned || false;
+            game.my_rating = userData?.my_rating || null;
+        });
+    }
+
+    _sortByMyRating(games, sortOrder) {
+        const direction = sortOrder === 'asc' ? 1 : -1;
+        return games.slice().sort((a, b) => {
+            const aRating = a.my_rating || 0;
+            const bRating = b.my_rating || 0;
+            if (aRating === bRating) return 0;
+            if (aRating === 0) return 1;
+            if (bRating === 0) return -1;
+            return (aRating - bRating) * direction;
+        });
+    }
+
     /**
      * 게임에 리뷰 정보 첨부
      */
@@ -141,13 +229,14 @@ class GameService {
     /**
      * 즐겨찾기 토글
      */
-    async toggleFavorite(bggId, currentFav) {
+    async toggleFavorite(userId, bggId, currentFav) {
         const newFav = currentFav ? 0 : 1;
         
         const { error } = await supabase
-            .from('boardgames')
-            .update({ is_favorite: newFav })
-            .eq('bgg_id', bggId);
+            .from('user_data')
+            .upsert([{ user_id: userId, bgg_id: bggId, is_favorite: newFav }], {
+                onConflict: 'user_id,bgg_id'
+            });
 
         if (error) throw error;
         
@@ -157,29 +246,45 @@ class GameService {
     /**
      * 플레이 예정 토글
      */
-    async toggleScheduled(bggId, currentScheduled) {
-        const newScheduled = currentScheduled ? 0 : 1;
+    async toggleWishlist(userId, bggId, currentWishlist) {
+        const newWishlist = currentWishlist ? 0 : 1;
         
         const { error } = await supabase
-            .from('boardgames')
-            .update({ is_scheduled: newScheduled })
-            .eq('bgg_id', bggId);
+            .from('user_data')
+            .upsert([{ user_id: userId, bgg_id: bggId, is_wishlist: newWishlist }], {
+                onConflict: 'user_id,bgg_id'
+            });
 
         if (error) throw error;
         
-        return { isScheduled: newScheduled };
+        return { isWishlist: newWishlist };
+    }
+
+    async togglePlanned(userId, bggId, currentPlanned) {
+        const newPlanned = currentPlanned ? 0 : 1;
+        
+        const { error } = await supabase
+            .from('user_data')
+            .upsert([{ user_id: userId, bgg_id: bggId, is_planned: newPlanned }], {
+                onConflict: 'user_id,bgg_id'
+            });
+
+        if (error) throw error;
+        
+        return { isPlanned: newPlanned };
     }
 
     /**
      * 보유 토글
      */
-    async toggleOwned(bggId, currentOwned) {
+    async toggleOwned(userId, bggId, currentOwned) {
         const newOwned = currentOwned ? 0 : 1;
         
         const { error } = await supabase
-            .from('boardgames')
-            .update({ is_owned: newOwned })
-            .eq('bgg_id', bggId);
+            .from('user_data')
+            .upsert([{ user_id: userId, bgg_id: bggId, is_owned: newOwned }], {
+                onConflict: 'user_id,bgg_id'
+            });
 
         if (error) throw error;
         
@@ -189,9 +294,7 @@ class GameService {
     /**
      * 리뷰 추가
      */
-    async addReview(bggId, rating, text) {
-        const userId = config.reviewUserId;
-
+    async addReview(userId, bggId, rating, text) {
         const { error } = await supabase
             .from('reviews')
             .upsert([{ user_id: userId, bgg_id: bggId, rating, text }], {
@@ -201,9 +304,10 @@ class GameService {
         if (error) throw error;
 
         const { error: ratingError } = await supabase
-            .from('boardgames')
-            .update({ my_rating: rating })
-            .eq('bgg_id', bggId);
+            .from('user_data')
+            .upsert([{ user_id: userId, bgg_id: bggId, my_rating: rating }], {
+                onConflict: 'user_id,bgg_id'
+            });
 
         if (ratingError) throw ratingError;
         
@@ -213,9 +317,7 @@ class GameService {
     /**
      * 리뷰 조회
      */
-    async getReview(bggId) {
-        const userId = config.reviewUserId;
-
+    async getReview(userId, bggId) {
         const { data, error } = await supabase
             .from('reviews')
             .select('rating, text')

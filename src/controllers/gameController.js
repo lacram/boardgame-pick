@@ -11,7 +11,7 @@ class GameController {
             const searchParams = this._parseSearchParams(req.query);
             
             // 캐시 키 생성
-            const cacheKey = this._generateCacheKey(searchParams);
+            const cacheKey = this._generateCacheKey(searchParams, req.userId);
             
             // 캐시 확인 (캐시 객체는 미들웨어에서 주입됨)
             const cached = req.cache.get(cacheKey);
@@ -20,13 +20,14 @@ class GameController {
             }
 
             // 게임 데이터 조회
-            const { games, total, totalPages } = await gameService.getGames(searchParams);
+            const { games, total, totalPages } = await gameService.getGames(searchParams, req.userId);
 
             const renderData = {
                 games,
                 currentPage: searchParams.page,
                 totalPages,
                 total,
+                currentUserId: req.userId,
                 ...this._extractSearchParams(searchParams)
             };
 
@@ -55,7 +56,7 @@ class GameController {
                 });
             }
 
-            const result = await gameService.toggleFavorite(rowId, currentFav);
+            const result = await gameService.toggleFavorite(req.userId, rowId, currentFav);
             
             // 캐시 무효화
             req.cache.clear();
@@ -72,17 +73,44 @@ class GameController {
     /**
      * 플레이 예정 토글
      */
-    async toggleScheduled(req, res) {
+    async toggleWishlist(req, res) {
         try {
-            const { rowId, currentScheduled } = req.body;
+            const { rowId, currentWishlist } = req.body;
             
-            if (!rowId || currentScheduled === undefined) {
+            if (!rowId || currentWishlist === undefined) {
                 return res.status(400).json({ 
                     error: '필수 파라미터가 누락되었습니다.' 
                 });
             }
 
-            const result = await gameService.toggleScheduled(rowId, currentScheduled);
+            const result = await gameService.toggleWishlist(req.userId, rowId, currentWishlist);
+            
+            // 캐시 무효화
+            req.cache.clear();
+            
+            res.json({ success: true, ...result });
+        } catch (error) {
+            console.error('위시리스트 토글 오류:', error);
+            res.status(500).json({ 
+                error: '위시리스트 상태를 변경하는 중 오류가 발생했습니다.' 
+            });
+        }
+    }
+
+    /**
+     * 플레이 예정 토글
+     */
+    async togglePlanned(req, res) {
+        try {
+            const { rowId, currentPlanned } = req.body;
+            
+            if (!rowId || currentPlanned === undefined) {
+                return res.status(400).json({ 
+                    error: '필수 파라미터가 누락되었습니다.' 
+                });
+            }
+
+            const result = await gameService.togglePlanned(req.userId, rowId, currentPlanned);
             
             // 캐시 무효화
             req.cache.clear();
@@ -109,7 +137,7 @@ class GameController {
                 });
             }
 
-            const result = await gameService.toggleOwned(rowId, currentOwned);
+            const result = await gameService.toggleOwned(req.userId, rowId, currentOwned);
             
             // 캐시 무효화
             req.cache.clear();
@@ -142,7 +170,7 @@ class GameController {
                 });
             }
 
-            const result = await gameService.addReview(bggId, rating, text);
+            const result = await gameService.addReview(req.userId, bggId, rating, text);
             
             // 캐시 무효화
             req.cache.clear();
@@ -169,7 +197,7 @@ class GameController {
                 });
             }
 
-            const review = await gameService.getReview(bggId);
+            const review = await gameService.getReview(req.userId, bggId);
             
             res.json({ 
                 success: true,
@@ -195,8 +223,9 @@ class GameController {
             weightMin: query.weightMin || '',
             weightMax: query.weightMax || '',
             showFavoritesOnly: query.showFavoritesOnly === 'on',
-            showScheduledOnly: query.showScheduledOnly === 'on',
+            showWishlistOnly: query.showWishlistOnly === 'on',
             showOwnedOnly: query.showOwnedOnly === 'on',
+            showPlannedOnly: query.showPlannedOnly === 'on',
             sortBy: query.sortBy || config.defaultSortBy,
             sortOrder: query.sortOrder || config.defaultSortOrder
         };
@@ -205,13 +234,13 @@ class GameController {
     /**
      * 캐시 키 생성
      */
-    _generateCacheKey(params) {
+    _generateCacheKey(params, userId) {
         const { 
             search, searchPlayers, searchBest, weightMin, weightMax,
-            showFavoritesOnly, showScheduledOnly, showOwnedOnly, sortBy, sortOrder, page 
+            showFavoritesOnly, showWishlistOnly, showOwnedOnly, showPlannedOnly, sortBy, sortOrder, page 
         } = params;
         
-        return `${search}-${searchPlayers}-${searchBest}-${weightMin}-${weightMax}-${showFavoritesOnly}-${showScheduledOnly}-${showOwnedOnly}-${sortBy}-${sortOrder}-${page}`;
+        return `${userId}-${search}-${searchPlayers}-${searchBest}-${weightMin}-${weightMax}-${showFavoritesOnly}-${showWishlistOnly}-${showOwnedOnly}-${showPlannedOnly}-${sortBy}-${sortOrder}-${page}`;
     }
 
     /**
@@ -225,8 +254,9 @@ class GameController {
             weightMin: params.weightMin,
             weightMax: params.weightMax,
             showFavoritesOnly: params.showFavoritesOnly,
-            showScheduledOnly: params.showScheduledOnly,
             showOwnedOnly: params.showOwnedOnly,
+            showWishlistOnly: params.showWishlistOnly,
+            showPlannedOnly: params.showPlannedOnly,
             sortBy: params.sortBy,
             sortOrder: params.sortOrder
         };
