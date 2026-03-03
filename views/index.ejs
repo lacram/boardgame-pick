@@ -103,11 +103,6 @@
 
         </form>
 
-        <!-- 통계 -->
-        <div class="stats">
-            📊 총 <%= total %>개 결과 | 📄 <%= currentPage %> / <%= totalPages %> 페이지
-        </div>
-
         <!-- 게임 그리드 -->
         <div class="game-grid">
             <% games.forEach(function(game) { %>
@@ -194,6 +189,15 @@
                 <% } %>
             </div>
         <% } %>
+
+        <div class="stats">
+            📊 총 <%= total %>개 결과 | 📄 <%= currentPage %> / <%= totalPages %> 페이지
+            <% if (lastSyncAt) { %>
+                | 🔄 마지막 BGG 동기화: <%= new Date(lastSyncAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) %>
+            <% } else { %>
+                | 🔄 마지막 BGG 동기화: 기록 없음
+            <% } %>
+        </div>
     </div>
 
     <!-- 평점 입력 모달 -->

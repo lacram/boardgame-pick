@@ -1,6 +1,7 @@
 const express = require('express');
 const gameController = require('../controllers/gameController');
 const userController = require('../controllers/userController');
+const cronController = require('../controllers/cronController');
 const { asyncHandler } = require('../middleware/errorMiddleware');
 const {
     validateSearchParams,
@@ -10,6 +11,15 @@ const {
 } = require('../middleware/validationMiddleware');
 
 const router = express.Router();
+
+// BGG 동기화 크론 (GET/POST 모두 지원)
+router.get('/api/cron/sync-bgg',
+    asyncHandler(cronController.syncBgg.bind(cronController))
+);
+
+router.post('/api/cron/sync-bgg',
+    asyncHandler(cronController.syncBgg.bind(cronController))
+);
 
 // 메인 페이지
 router.get('/', 

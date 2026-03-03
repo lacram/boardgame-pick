@@ -911,7 +911,8 @@ body {
 
 .stats {
     text-align: center;
-    margin-bottom: 15px;
+    margin-top: 12px;
+    margin-bottom: 8px;
     color: #666;
     font-size: 14px;
 }

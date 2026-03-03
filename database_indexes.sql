@@ -9,6 +9,7 @@ ALTER TABLE boardgames
     ADD COLUMN IF NOT EXISTS rank int,
     ADD COLUMN IF NOT EXISTS average_rating numeric,
     ADD COLUMN IF NOT EXISTS last_dump_seen_at timestamptz,
+    ADD COLUMN IF NOT EXISTS source_updated_at timestamptz,
     ADD COLUMN IF NOT EXISTS last_detail_sync_at timestamptz,
     ADD COLUMN IF NOT EXISTS detail_sync_status text,
     ADD COLUMN IF NOT EXISTS my_rating int,
@@ -144,6 +145,58 @@ CREATE INDEX IF NOT EXISTS idx_user_data_user_planned
 
 CREATE INDEX IF NOT EXISTS idx_user_data_user_rating
     ON user_data(user_id, my_rating DESC);
+
+-- BGG 동기화 상태 테이블
+CREATE TABLE IF NOT EXISTS sync_jobs (
+    id bigserial PRIMARY KEY,
+    job_type text NOT NULL DEFAULT 'incremental',
+    trigger_source text,
+    started_at timestamptz NOT NULL DEFAULT now(),
+    finished_at timestamptz,
+    status text NOT NULL DEFAULT 'running',
+    total_count int NOT NULL DEFAULT 0,
+    success_count int NOT NULL DEFAULT 0,
+    fail_count int NOT NULL DEFAULT 0,
+    last_error text
+);
+
+CREATE TABLE IF NOT EXISTS sync_targets (
+    bgg_id int PRIMARY KEY,
+    priority int NOT NULL DEFAULT 1,
+    next_sync_at timestamptz,
+    last_attempt_at timestamptz,
+    attempt_count int NOT NULL DEFAULT 0,
+    last_error text,
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS sync_errors (
+    id bigserial PRIMARY KEY,
+    job_id bigint REFERENCES sync_jobs(id) ON DELETE SET NULL,
+    bgg_id int,
+    error_code text,
+    message text,
+    payload_snippet text,
+    created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sync_jobs_started_at
+    ON sync_jobs(started_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_sync_jobs_status
+    ON sync_jobs(status);
+
+CREATE INDEX IF NOT EXISTS idx_sync_targets_next_sync_at
+    ON sync_targets(next_sync_at);
+
+CREATE INDEX IF NOT EXISTS idx_sync_targets_priority_next
+    ON sync_targets(priority DESC, next_sync_at);
+
+CREATE INDEX IF NOT EXISTS idx_sync_errors_job_id
+    ON sync_errors(job_id);
+
+CREATE INDEX IF NOT EXISTS idx_sync_errors_created_at
+    ON sync_errors(created_at DESC);
 
 -- 인덱스 생성 확인 쿼리
 SELECT 

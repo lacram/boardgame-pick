@@ -20,7 +20,13 @@ const config = {
     },
 
     // 리뷰 설정 (단일 사용자 기본값)
-    reviewUserId: process.env.REVIEW_USER_ID || 'local-user'
+    reviewUserId: process.env.REVIEW_USER_ID || 'local-user',
+
+    // 크론/동기화 설정
+    cron: {
+        secret: process.env.CRON_SECRET || '',
+        defaultSyncLimit: parseInt(process.env.BGG_DETAIL_SYNC_LIMIT || '200', 10)
+    }
 };
 
 // 필수 환경 변수 검증

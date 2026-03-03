@@ -41,7 +41,8 @@ class GameService {
             userFilteredIds = (userRows || []).map(row => row.bgg_id);
 
             if (userFilteredIds.length === 0) {
-                return { games: [], total: 0, totalPages: 1 };
+                const lastSyncAt = await this._getLastSyncAt();
+                return { games: [], total: 0, totalPages: 1, lastSyncAt };
             }
         }
 
@@ -77,7 +78,8 @@ class GameService {
         }
 
         if (games.length === 0) {
-            return { games: [], total: 0, totalPages: 1 };
+            const lastSyncAt = await this._getLastSyncAt();
+            return { games: [], total: 0, totalPages: 1, lastSyncAt };
         }
 
         const userDataMap = await this._getUserDataMap(userId, games.map(game => game.bgg_id));
@@ -95,8 +97,21 @@ class GameService {
         }
 
         const totalPages = Math.max(1, Math.ceil(total / config.pageSize));
+        const lastSyncAt = await this._getLastSyncAt();
 
-        return { games, total, totalPages };
+        return { games, total, totalPages, lastSyncAt };
+    }
+
+    async _getLastSyncAt() {
+        const { data, error } = await supabase
+            .from('boardgames')
+            .select('last_detail_sync_at')
+            .not('last_detail_sync_at', 'is', null)
+            .order('last_detail_sync_at', { ascending: false })
+            .limit(1);
+
+        if (error) throw error;
+        return data?.[0]?.last_detail_sync_at || null;
     }
 
     /**

@@ -14,5 +14,11 @@
   "env": {
     "NODE_ENV": "production"
   },
-  "regions": ["icn1"]
-} 
+  "regions": ["icn1"],
+  "crons": [
+    {
+      "path": "/api/cron/sync-bgg",
+      "schedule": "0 18 * * *"
+    }
+  ]
+}

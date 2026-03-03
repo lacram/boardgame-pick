@@ -20,13 +20,14 @@ class GameController {
             }
 
             // 게임 데이터 조회
-            const { games, total, totalPages } = await gameService.getGames(searchParams, req.userId);
+            const { games, total, totalPages, lastSyncAt } = await gameService.getGames(searchParams, req.userId);
 
             const renderData = {
                 games,
                 currentPage: searchParams.page,
                 totalPages,
                 total,
+                lastSyncAt,
                 currentUserId: req.userId,
                 ...this._extractSearchParams(searchParams)
             };
