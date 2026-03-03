@@ -48,48 +48,56 @@
             <div class="search-row">
                 <input type="text" name="search" placeholder="🎮 게임명 검색" 
                        value="<%= search %>" class="search-input">
-                <input type="text" name="searchPlayers" placeholder="👥 인원 (예: 2, 2-4)" 
-                       value="<%= searchPlayers %>" class="search-input">
-                <input type="text" name="searchBest" placeholder="⭐ 베스트 (예: 3, 2-4)" 
-                       value="<%= searchBest %>" class="search-input">
+                <div class="inline-pair">
+                    <input type="text" name="searchPlayers" placeholder="👥 인원 (예: 2, 2-4)" 
+                           value="<%= searchPlayers %>" class="search-input">
+                    <input type="text" name="searchBest" placeholder="⭐ 베스트 (예: 3, 2-4)" 
+                           value="<%= searchBest %>" class="search-input">
+                </div>
             </div>
             <div class="search-row">
-                <input type="number" name="weightMin" placeholder="🎯 난이도 최소" 
-                       value="<%= weightMin %>" class="search-input" step="0.1" min="0" max="5">
-                <input type="number" name="weightMax" placeholder="🎯 난이도 최대" 
-                       value="<%= weightMax %>" class="search-input" step="0.1" min="0" max="5">
-                <div class="checkbox-container">
-                    <input type="checkbox" name="showFavoritesOnly" id="favorites" 
-                           <%= showFavoritesOnly ? 'checked' : '' %>>
-                    <label for="favorites">즐겨찾기만</label>
+                <div class="inline-pair">
+                    <input type="number" name="weightMin" placeholder="🎯 난이도 최소" 
+                           value="<%= weightMin %>" class="search-input" step="0.1" min="0" max="5">
+                    <input type="number" name="weightMax" placeholder="🎯 난이도 최대" 
+                           value="<%= weightMax %>" class="search-input" step="0.1" min="0" max="5">
                 </div>
-                <div class="checkbox-container">
-                    <input type="checkbox" name="showWishlistOnly" id="wishlist" 
-                           <%= showWishlistOnly ? 'checked' : '' %>>
-                    <label for="wishlist">위시리스트만</label>
+                <div class="checkbox-row">
+                    <div class="checkbox-container">
+                        <input type="checkbox" name="showFavoritesOnly" id="favorites" 
+                               <%= showFavoritesOnly ? 'checked' : '' %>>
+                        <label for="favorites">즐겨찾기</label>
+                    </div>
+                    <div class="checkbox-container">
+                        <input type="checkbox" name="showWishlistOnly" id="wishlist" 
+                               <%= showWishlistOnly ? 'checked' : '' %>>
+                        <label for="wishlist">위시리스트</label>
+                    </div>
+                    <div class="checkbox-container">
+                        <input type="checkbox" name="showOwnedOnly" id="owned" 
+                               <%= showOwnedOnly ? 'checked' : '' %>>
+                        <label for="owned">보유</label>
+                    </div>
+                    <div class="checkbox-container">
+                        <input type="checkbox" name="showPlannedOnly" id="planned" 
+                               <%= showPlannedOnly ? 'checked' : '' %>>
+                        <label for="planned">플레이 예정</label>
+                    </div>
                 </div>
-                <div class="checkbox-container">
-                    <input type="checkbox" name="showOwnedOnly" id="owned" 
-                           <%= showOwnedOnly ? 'checked' : '' %>>
-                    <label for="owned">보유만</label>
+                <div class="inline-pair sort-pair">
+                    <select name="sortBy" class="search-input sort-by-input">
+                        <option value="rating" <%= sortBy === 'rating' ? 'selected' : '' %>>평점순</option>
+                        <option value="myRating" <%= sortBy === 'myRating' ? 'selected' : '' %>>내 평점순</option>
+                        <option value="weight" <%= sortBy === 'weight' ? 'selected' : '' %>>난이도순</option>
+                        <option value="name" <%= sortBy === 'name' ? 'selected' : '' %>>이름순</option>
+                        <option value="players_recommended" <%= sortBy === 'players_recommended' ? 'selected' : '' %>>추천인원순</option>
+                        <option value="play_time_min" <%= sortBy === 'play_time_min' ? 'selected' : '' %>>시간순</option>
+                    </select>
+                    <select name="sortOrder" class="search-input sort-order-input">
+                        <option value="desc" <%= sortOrder === 'desc' ? 'selected' : '' %>>내림차순</option>
+                        <option value="asc" <%= sortOrder === 'asc' ? 'selected' : '' %>>오름차순</option>
+                    </select>
                 </div>
-                <div class="checkbox-container">
-                    <input type="checkbox" name="showPlannedOnly" id="planned" 
-                           <%= showPlannedOnly ? 'checked' : '' %>>
-                    <label for="planned">플레이 예정만</label>
-                </div>
-                <select name="sortBy" class="search-input" style="min-width: 120px;">
-                    <option value="rating" <%= sortBy === 'rating' ? 'selected' : '' %>>평점순</option>
-                    <option value="myRating" <%= sortBy === 'myRating' ? 'selected' : '' %>>내 평점순</option>
-                    <option value="weight" <%= sortBy === 'weight' ? 'selected' : '' %>>난이도순</option>
-                    <option value="name" <%= sortBy === 'name' ? 'selected' : '' %>>이름순</option>
-                    <option value="players_recommended" <%= sortBy === 'players_recommended' ? 'selected' : '' %>>추천인원순</option>
-                    <option value="play_time_min" <%= sortBy === 'play_time_min' ? 'selected' : '' %>>시간순</option>
-                </select>
-                <select name="sortOrder" class="search-input" style="min-width: 80px;">
-                    <option value="desc" <%= sortOrder === 'desc' ? 'selected' : '' %>>내림차순</option>
-                    <option value="asc" <%= sortOrder === 'asc' ? 'selected' : '' %>>오름차순</option>
-                </select>
                 <button type="submit" class="search-button">🔍 검색</button>
             </div>
 
@@ -108,9 +116,9 @@
                         <img src="<%= game.main_image_url %>" alt="<%= game.name %>" class="game-image">
                     <% } %>
                     <div class="game-content">
-                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div class="game-header-row">
                             <a href="<%= game.url %>" target="_blank" class="game-title"><%= game.displayName %></a>
-                            <div style="display: flex; gap: 4px;">
+                            <div class="game-top-actions">
                                 <button class="favorite-button <%= game.is_favorite ? 'active' : '' %>" 
                                         data-rowid="<%= game.bgg_id %>" 
                                         data-favorite="<%= game.is_favorite ? 1 : 0 %>">

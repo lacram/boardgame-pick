@@ -255,6 +255,25 @@ body {
     font-size: 14px;
 }
 
+.inline-pair {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    min-width: 240px;
+}
+
+.inline-pair .search-input {
+    min-width: 0;
+}
+
+.sort-by-input {
+    min-width: 120px;
+}
+
+.sort-order-input {
+    min-width: 80px;
+}
+
 .search-button {
     background: #1b365d;
     color: white;
@@ -278,6 +297,13 @@ body {
     align-items: center;
     gap: 5px;
     font-size: 14px;
+}
+
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .game-grid {
@@ -330,6 +356,28 @@ body {
     .search-input {
         min-width: auto;
     }
+
+    .inline-pair {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .inline-pair .search-input {
+        width: 50%;
+        flex: 1;
+    }
+
+    .checkbox-row {
+        width: 100%;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .checkbox-row .checkbox-container {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
 }
 
 @media (max-width: 480px) {
@@ -374,6 +422,24 @@ body {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+}
+
+.game-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.game-top-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.game-header-row .game-title {
+    flex: 1;
+    min-width: 0;
 }
 
 .game-title:hover {
@@ -911,6 +977,23 @@ body {
     
     .favorite-button, .wishlist-button, .planned-button, .owned-button {
         font-size: 16px;
+        padding: 1px;
+    }
+
+    .game-top-actions {
+        gap: 2px;
+    }
+
+    .bookmark-icon,
+    .planned-icon,
+    .owned-icon {
+        width: 18px;
+        height: 18px;
+    }
+
+    .wishlist-icon {
+        width: 19px;
+        height: 19px;
     }
     
     .page-button {
