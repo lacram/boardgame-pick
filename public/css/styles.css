@@ -917,6 +917,12 @@ body {
     font-size: 14px;
 }
 
+.stats-sync {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 13px;
+}
+
 .rating-button, .review-button {
     margin-left: 5px;
     width: 30px;
