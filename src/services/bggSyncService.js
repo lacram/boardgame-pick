@@ -4,10 +4,11 @@ const { parsePlayersToSet } = require('../../utils/searchUtils');
 
 const BASE_URL = process.env.BGG_XML_API_URL || 'https://boardgamegeek.com/xmlapi2/thing';
 const APP_TOKEN = process.env.BGG_APP_TOKEN;
-const BATCH_SIZE = Math.min(parseInt(process.env.BGG_DETAIL_BATCH_SIZE || '20', 10), 20);
+const BATCH_SIZE = Math.max(parseInt(process.env.BGG_DETAIL_BATCH_SIZE || '20', 10), 1);
 const DEFAULT_SYNC_LIMIT = parseInt(process.env.BGG_DETAIL_SYNC_LIMIT || '200', 10);
 const MIN_AGE_DAYS = parseInt(process.env.BGG_DETAIL_MIN_AGE_DAYS || '0', 10);
 const RATE_LIMIT_MS = parseInt(process.env.BGG_DETAIL_RATE_LIMIT_MS || '5000', 10);
+const CRON_FULL_RATE_LIMIT_MS = parseInt(process.env.BGG_DETAIL_RATE_LIMIT_MS_CRON_FULL || '1000', 10);
 const RETRY_BASE_MINUTES = parseInt(process.env.BGG_SYNC_RETRY_BASE_MINUTES || '30', 10);
 const RETRY_MAX_MINUTES = parseInt(process.env.BGG_SYNC_RETRY_MAX_MINUTES || '1440', 10);
 
@@ -475,6 +476,9 @@ async function runDetailSync(options = {}) {
         ? parsedLimit
         : (jobType === 'full' ? null : DEFAULT_SYNC_LIMIT);
     const requestedBy = options.requestedBy || 'manual';
+    const effectiveRateLimitMs = requestedBy === 'vercel-cron' && jobType === 'full'
+        ? CRON_FULL_RATE_LIMIT_MS
+        : RATE_LIMIT_MS;
 
     const jobId = await safeInsertJob({
         job_type: jobType,
@@ -544,7 +548,7 @@ async function runDetailSync(options = {}) {
             }
 
             if (i + BATCH_SIZE < candidates.length) {
-                await delay(RATE_LIMIT_MS);
+                await delay(effectiveRateLimitMs);
             }
         }
 
