@@ -19,10 +19,6 @@
     {
       "path": "/api/cron/sync-bgg",
       "schedule": "0 18 * * 0"
-    },
-    {
-      "path": "/api/cron/boardlife-notify",
-      "schedule": "* * * * *"
     }
   ]
 }

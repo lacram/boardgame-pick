@@ -63,7 +63,6 @@ jspm_packages/
 .env.local
 .env.production
 .env.development
-.boardlife.cookie
 
 # Vercel
 .vercel

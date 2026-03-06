@@ -1,5 +1,4 @@
 const bggSyncService = require('../services/bggSyncService');
-const { runBoardlifeNotifyJob } = require('../services/boardlifeNotifyService');
 const config = require('../../config');
 
 function parseBoolean(value) {
@@ -50,33 +49,6 @@ class CronController {
             return res.status(500).json({
                 success: false,
                 error: error.message || 'sync failed'
-            });
-        }
-    }
-
-    async boardlifeNotify(req, res) {
-        const cronSecret = config.cron.secret;
-        const bearerToken = extractBearerToken(req.headers.authorization);
-        const providedSecret = req.headers['x-cron-secret'] || bearerToken || req.query.secret || req.body?.secret;
-
-        if (cronSecret && providedSecret !== cronSecret) {
-            return res.status(403).json({
-                success: false,
-                error: 'forbidden'
-            });
-        }
-
-        try {
-            const result = await runBoardlifeNotifyJob();
-            return res.json({
-                success: true,
-                result
-            });
-        } catch (error) {
-            console.error('BoardLife notify cron error:', error);
-            return res.status(500).json({
-                success: false,
-                error: error.message || 'notify failed'
             });
         }
     }
