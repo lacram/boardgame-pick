@@ -21,6 +21,14 @@ router.post('/api/cron/sync-bgg',
     asyncHandler(cronController.syncBgg.bind(cronController))
 );
 
+router.get('/api/cron/boardlife-notify',
+    asyncHandler(cronController.boardlifeNotify.bind(cronController))
+);
+
+router.post('/api/cron/boardlife-notify',
+    asyncHandler(cronController.boardlifeNotify.bind(cronController))
+);
+
 // 메인 페이지
 router.get('/', 
     validateSearchParams,
