@@ -2,6 +2,10 @@ const supabase = require('../../supabase-client');
 const { parsePlayersToSet } = require('../../utils/searchUtils');
 const config = require('../../config');
 
+function quotePostgrestValue(value) {
+    return `"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+}
+
 class GameService {
     /**
      * 게임 목록을 가져오는 메인 서비스 함수
@@ -124,7 +128,8 @@ class GameService {
         } = filters;
 
         if (search) {
-            query = query.or(`name.ilike.%${search}%,korean_name.ilike.%${search}%`);
+            const searchPattern = quotePostgrestValue(`%${search.trim()}%`);
+            query = query.or(`name.ilike.${searchPattern},korean_name.ilike.${searchPattern}`);
         }
         if (searchPlayers) {
             const playersSet = parsePlayersToSet(searchPlayers);
@@ -152,7 +157,7 @@ class GameService {
      */
     _applySorting(query, sortBy, sortOrder) {
         const normalizedSortBy = sortBy === 'myRating' ? 'my_rating' : sortBy;
-        const validSortFields = ['rating', 'weight', 'name', 'my_rating'];
+        const validSortFields = ['rating', 'weight', 'name', 'my_rating', 'players_recommended', 'play_time_min'];
         if (validSortFields.includes(normalizedSortBy)) {
             query = query.order(normalizedSortBy, { ascending: sortOrder === 'asc' });
         }

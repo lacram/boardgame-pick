@@ -1,26 +1,27 @@
 const bggSyncService = require('../services/bggSyncService');
 const config = require('../../config');
+const {
+    isCronAuthorized,
+    normalizeJobType,
+    normalizeLimit
+} = require('../utils/cronAuth');
 
 function parseBoolean(value) {
     if (value === true || value === 'true' || value === '1' || value === 1) return true;
     return false;
 }
 
-function extractBearerToken(authHeader) {
-    if (!authHeader || typeof authHeader !== 'string') return '';
-    const [scheme, token] = authHeader.split(' ');
-    if (!scheme || !token) return '';
-    if (scheme.toLowerCase() !== 'bearer') return '';
-    return token.trim();
-}
-
 class CronController {
     async syncBgg(req, res) {
         const cronSecret = config.cron.secret;
-        const bearerToken = extractBearerToken(req.headers.authorization);
-        const providedSecret = req.headers['x-cron-secret'] || bearerToken || req.query.secret || req.body?.secret;
+        if (!cronSecret) {
+            return res.status(503).json({
+                success: false,
+                error: 'cron secret is not configured'
+            });
+        }
 
-        if (cronSecret && providedSecret !== cronSecret) {
+        if (!isCronAuthorized(req.headers, cronSecret)) {
             return res.status(403).json({
                 success: false,
                 error: 'forbidden'
@@ -28,15 +29,15 @@ class CronController {
         }
 
         const isVercelCron = Boolean(req.headers['x-vercel-cron']);
-        const jobType = req.query.jobType || req.body?.jobType || (isVercelCron ? 'full' : 'incremental');
-        const limitRaw = req.query.limit || req.body?.limit;
+        const jobType = normalizeJobType(req.query.jobType || req.body?.jobType || (isVercelCron ? 'full' : 'incremental'));
+        const limit = normalizeLimit(req.query.limit || req.body?.limit, config.cron.maxSyncLimit);
         const force = parseBoolean(req.query.force || req.body?.force);
         const requestedBy = isVercelCron ? 'vercel-cron' : 'api';
 
         try {
             const result = await bggSyncService.runDetailSync({
                 jobType: force ? 'full' : jobType,
-                limit: limitRaw,
+                limit,
                 requestedBy
             });
 

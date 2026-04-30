@@ -6,6 +6,9 @@
   "scripts": {
     "start": "node api/index.js",
     "dev": "nodemon api/index.js",
+    "check": "find api config src public/js scripts utils test -type f -name '*.js' -print | sort | xargs -r -n1 node --check",
+    "test": "node --test",
+    "audit": "npm audit --omit=dev",
     "sync:dump": "node scripts/sync-bgg-dump.js",
     "sync:details": "node scripts/sync-bgg-details.js",
     "backfill:players": "node scripts/backfill-players-sets.js"

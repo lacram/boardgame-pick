@@ -66,9 +66,9 @@ function saveRating() {
 
     fetch('/add-review', {
         method: 'POST',
-        headers: {
+        headers: withCsrfHeaders({
             'Content-Type': 'application/json',
-        },
+        }),
         body: JSON.stringify({
             bggId: currentBggId,
             rating: selectedRating,

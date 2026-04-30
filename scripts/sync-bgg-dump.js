@@ -4,10 +4,12 @@ const path = require('path');
 const zlib = require('zlib');
 const { pipeline } = require('stream/promises');
 const supabase = require('../supabase-client');
+const { fetchWithTimeout } = require('../src/utils/httpUtils');
 
 const DUMP_URL = process.env.BGG_DUMP_URL || 'https://boardgamegeek.com/data_dumps/bg_ranks';
 const APP_TOKEN = process.env.BGG_APP_TOKEN;
 const BATCH_SIZE = parseInt(process.env.BGG_DUMP_BATCH_SIZE || '1000', 10);
+const FETCH_TIMEOUT_MS = parseInt(process.env.BGG_FETCH_TIMEOUT_MS || '15000', 10);
 
 function normalizeHeader(value) {
     return value
@@ -50,7 +52,7 @@ function parseCsvLine(line) {
 
 async function downloadDump(tempPath) {
     const headers = APP_TOKEN ? { Authorization: `Bearer ${APP_TOKEN}` } : {};
-    const response = await fetch(DUMP_URL, { headers });
+    const response = await fetchWithTimeout(DUMP_URL, { headers, timeoutMs: FETCH_TIMEOUT_MS });
 
     if (!response.ok) {
         throw new Error(`CSV download failed: ${response.status} ${response.statusText}`);
@@ -111,55 +113,60 @@ async function upsertBatch(batch) {
 async function syncDump() {
     const tempPath = path.join(os.tmpdir(), `bg_ranks_${Date.now()}.csv`);
     console.log(`Downloading CSV dump from ${DUMP_URL}...`);
-    await downloadDump(tempPath);
+    try {
+        await downloadDump(tempPath);
 
-    const stream = fs.createReadStream(tempPath, { encoding: 'utf8' });
-    let buffer = '';
-    let headers = null;
-    let batch = [];
-    let total = 0;
+        const stream = fs.createReadStream(tempPath, { encoding: 'utf8' });
+        let buffer = '';
+        let headers = null;
+        let batch = [];
+        let total = 0;
 
-    for await (const chunk of stream) {
-        buffer += chunk;
-        let lineEnd = buffer.indexOf('\n');
-        while (lineEnd >= 0) {
-            const line = buffer.slice(0, lineEnd).replace(/\r$/, '');
-            buffer = buffer.slice(lineEnd + 1);
-            lineEnd = buffer.indexOf('\n');
+        for await (const chunk of stream) {
+            buffer += chunk;
+            let lineEnd = buffer.indexOf('\n');
+            while (lineEnd >= 0) {
+                const line = buffer.slice(0, lineEnd).replace(/\r$/, '');
+                buffer = buffer.slice(lineEnd + 1);
+                lineEnd = buffer.indexOf('\n');
 
-            if (!headers) {
-                headers = parseCsvLine(line);
-                continue;
-            }
+                if (!headers) {
+                    headers = parseCsvLine(line);
+                    continue;
+                }
 
-            if (!line.trim()) continue;
-            const values = parseCsvLine(line);
-            const mapped = mapRow(headers, values);
-            if (!mapped) continue;
+                if (!line.trim()) continue;
+                const values = parseCsvLine(line);
+                const mapped = mapRow(headers, values);
+                if (!mapped) continue;
 
-            batch.push(mapped);
-            if (batch.length >= BATCH_SIZE) {
-                await upsertBatch(batch);
-                total += batch.length;
-                console.log(`Upserted ${total} rows...`);
-                batch = [];
+                batch.push(mapped);
+                if (batch.length >= BATCH_SIZE) {
+                    await upsertBatch(batch);
+                    total += batch.length;
+                    console.log(`Upserted ${total} rows...`);
+                    batch = [];
+                }
             }
         }
-    }
 
-    if (buffer.trim()) {
-        const values = parseCsvLine(buffer.replace(/\r$/, ''));
-        const mapped = mapRow(headers, values);
-        if (mapped) batch.push(mapped);
-    }
+        if (buffer.trim()) {
+            const values = parseCsvLine(buffer.replace(/\r$/, ''));
+            const mapped = mapRow(headers, values);
+            if (mapped) batch.push(mapped);
+        }
 
-    if (batch.length > 0) {
-        await upsertBatch(batch);
-        total += batch.length;
-    }
+        if (batch.length > 0) {
+            await upsertBatch(batch);
+            total += batch.length;
+        }
 
-    fs.unlinkSync(tempPath);
-    console.log(`CSV sync complete. Upserted ${total} rows.`);
+        console.log(`CSV sync complete. Upserted ${total} rows.`);
+    } finally {
+        if (fs.existsSync(tempPath)) {
+            fs.unlinkSync(tempPath);
+        }
+    }
 }
 
 syncDump().catch(err => {

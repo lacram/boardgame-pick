@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function addUser(userId) {
         fetch('/users/add', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: withCsrfHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({ userId })
         })
         .then(response => response.json())
@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function selectUser(userId) {
         fetch('/users/select', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: withCsrfHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({ userId })
         })
         .then(response => response.json())

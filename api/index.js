@@ -5,6 +5,7 @@ const config = require('../config');
 // 미들웨어
 const { cacheMiddleware, destroyCache } = require('../src/middleware/cacheMiddleware');
 const { notFoundHandler, errorHandler } = require('../src/middleware/errorMiddleware');
+const { csrfMiddleware, setSecurityHeaders } = require('../src/middleware/securityMiddleware');
 const { userMiddleware } = require('../src/middleware/userMiddleware');
 
 // 라우터
@@ -15,6 +16,7 @@ const app = express();
 // 기본 미들웨어 설정
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));
+app.use(setSecurityHeaders);
 app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -22,6 +24,7 @@ app.use(express.json());
 // 커스텀 미들웨어
 app.use(cacheMiddleware);
 app.use(userMiddleware);
+app.use(csrfMiddleware);
 
 // 라우터 연결
 app.use('/', gameRoutes);
@@ -34,7 +37,7 @@ app.use(errorHandler);
 module.exports = app;
 
 // 로컬 개발용 서버 시작
-if (config.nodeEnv !== 'production' || process.env.VERCEL !== '1') {
+if (require.main === module && (config.nodeEnv !== 'production' || process.env.VERCEL !== '1')) {
     app.listen(config.port, () => {
         console.log(`서버가 http://localhost:${config.port} 에서 실행 중입니다.`);
         console.log(`환경: ${config.nodeEnv}`);

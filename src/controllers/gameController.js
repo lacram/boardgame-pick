@@ -1,6 +1,10 @@
 const gameService = require('../services/gameService');
 const config = require('../../config');
 
+function toBooleanState(value) {
+    return value === true || value === 1 || value === '1';
+}
+
 class GameController {
     /**
      * 메인 페이지 - 게임 목록
@@ -57,7 +61,7 @@ class GameController {
                 });
             }
 
-            const result = await gameService.toggleFavorite(req.userId, rowId, currentFav);
+            const result = await gameService.toggleFavorite(req.userId, rowId, toBooleanState(currentFav));
             
             // 캐시 무효화
             req.cache.clear();
@@ -84,7 +88,7 @@ class GameController {
                 });
             }
 
-            const result = await gameService.toggleWishlist(req.userId, rowId, currentWishlist);
+            const result = await gameService.toggleWishlist(req.userId, rowId, toBooleanState(currentWishlist));
             
             // 캐시 무효화
             req.cache.clear();
@@ -111,7 +115,7 @@ class GameController {
                 });
             }
 
-            const result = await gameService.togglePlanned(req.userId, rowId, currentPlanned);
+            const result = await gameService.togglePlanned(req.userId, rowId, toBooleanState(currentPlanned));
             
             // 캐시 무효화
             req.cache.clear();
@@ -138,7 +142,7 @@ class GameController {
                 });
             }
 
-            const result = await gameService.toggleOwned(req.userId, rowId, currentOwned);
+            const result = await gameService.toggleOwned(req.userId, rowId, toBooleanState(currentOwned));
             
             // 캐시 무효화
             req.cache.clear();

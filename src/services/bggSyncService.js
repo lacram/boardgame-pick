@@ -1,6 +1,7 @@
 const { Parser } = require('xml2js');
 const supabase = require('../../supabase-client');
 const { parsePlayersToSet } = require('../../utils/searchUtils');
+const { fetchWithTimeout } = require('../utils/httpUtils');
 
 const BASE_URL = process.env.BGG_XML_API_URL || 'https://boardgamegeek.com/xmlapi2/thing';
 const APP_TOKEN = process.env.BGG_APP_TOKEN;
@@ -11,6 +12,7 @@ const RATE_LIMIT_MS = parseInt(process.env.BGG_DETAIL_RATE_LIMIT_MS || '5000', 1
 const CRON_FULL_RATE_LIMIT_MS = parseInt(process.env.BGG_DETAIL_RATE_LIMIT_MS_CRON_FULL || '1000', 10);
 const RETRY_BASE_MINUTES = parseInt(process.env.BGG_SYNC_RETRY_BASE_MINUTES || '30', 10);
 const RETRY_MAX_MINUTES = parseInt(process.env.BGG_SYNC_RETRY_MAX_MINUTES || '1440', 10);
+const FETCH_TIMEOUT_MS = parseInt(process.env.BGG_FETCH_TIMEOUT_MS || '15000', 10);
 
 const parser = new Parser({ explicitArray: false, mergeAttrs: true, explicitRoot: false });
 
@@ -345,7 +347,7 @@ async function loadCandidates(limit, jobType) {
 async function fetchDetails(ids) {
     const headers = APP_TOKEN ? { Authorization: `Bearer ${APP_TOKEN}` } : {};
     const url = `${BASE_URL}?id=${ids.join(',')}&stats=1`;
-    const response = await fetch(url, { headers });
+    const response = await fetchWithTimeout(url, { headers, timeoutMs: FETCH_TIMEOUT_MS });
 
     if (!response.ok) {
         throw new Error(`XML API request failed: ${response.status} ${response.statusText}`);

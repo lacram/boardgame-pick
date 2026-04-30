@@ -11,9 +11,9 @@ function toggleFavorite(button, rowId, currentFav) {
     
     fetch('/toggle-favorite', {
         method: 'POST',
-        headers: {
+        headers: withCsrfHeaders({
             'Content-Type': 'application/json',
-        },
+        }),
         body: JSON.stringify(requestData)
     })
     .then(response => response.json())
@@ -55,9 +55,9 @@ function toggleWishlist(button, rowId, currentWishlist) {
     
     fetch('/toggle-wishlist', {
         method: 'POST',
-        headers: {
+        headers: withCsrfHeaders({
             'Content-Type': 'application/json',
-        },
+        }),
         body: JSON.stringify(requestData)
     })
     .then(response => response.json())
@@ -99,9 +99,9 @@ function togglePlanned(button, rowId, currentPlanned) {
     
     fetch('/toggle-planned', {
         method: 'POST',
-        headers: {
+        headers: withCsrfHeaders({
             'Content-Type': 'application/json',
-        },
+        }),
         body: JSON.stringify(requestData)
     })
     .then(response => response.json())
@@ -143,9 +143,9 @@ function toggleOwned(button, rowId, currentOwned) {
     
     fetch('/toggle-owned', {
         method: 'POST',
-        headers: {
+        headers: withCsrfHeaders({
             'Content-Type': 'application/json',
-        },
+        }),
         body: JSON.stringify(requestData)
     })
     .then(response => response.json())

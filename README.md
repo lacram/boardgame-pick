@@ -48,6 +48,10 @@ cp .env.example .env
 필수 환경 변수:
 - `SUPABASE_URL`: Supabase 프로젝트 URL
 - `SUPABASE_ANON_KEY`: Supabase Anonymous Key
+- `COOKIE_SECRET`: 공유 프로필 쿠키/CSRF 서명용 긴 무작위 문자열(production 필수)
+- `CRON_SECRET`: Vercel Cron 보호용 긴 무작위 문자열(production 및 크론 사용 시 필수)
+
+> 현재 유저 전환은 **공유 로컬 프로필** 기능입니다. 로그인/인가가 적용된 공개 멀티유저 계정이 아니므로, 사용자별 데이터 보호가 필요한 공개 서비스로 운영하려면 Supabase Auth/RLS와 기존 `bgp_user` 데이터 claim/import 마이그레이션을 별도 도입해야 합니다.
 
 ### 4. 데이터베이스 설정
 
@@ -159,6 +163,14 @@ boardgame-pick/
 1. Vercel CLI 설치: `npm i -g vercel`
 2. 프로젝트 배포: `vercel`
 3. 환경 변수를 Vercel 대시보드에서 설정
+
+### 배포 전 보안 체크리스트
+
+- Vercel 환경 변수에 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `COOKIE_SECRET`, `CRON_SECRET`을 설정합니다.
+- Vercel Cron은 `CRON_SECRET`이 설정되면 `Authorization: Bearer <CRON_SECRET>` 헤더를 자동 전송합니다. 서버는 secret 누락/불일치 시 동기화를 거부합니다.
+- `npm run audit`로 production 의존성 HIGH 취약점이 0인지 확인합니다.
+- `npm run check`와 `npm test`를 실행합니다.
+- 배포 후 주요 화면, 검색, 프로필 전환, 토글, 리뷰 저장, 크론 403/성공 케이스를 smoke test합니다.
 
 ## 개발 가이드
 

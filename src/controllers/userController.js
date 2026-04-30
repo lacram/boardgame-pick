@@ -1,5 +1,7 @@
 const userService = require('../services/userService');
 const config = require('../../config');
+const { serializeCookie, signValue } = require('../utils/cookieUtils');
+const { buildCookieOptions } = require('../middleware/securityMiddleware');
 
 class UserController {
     async listUsers(req, res) {
@@ -68,9 +70,12 @@ class UserController {
     }
 
     _buildUserCookie(userId) {
-        const encoded = encodeURIComponent(userId);
         const maxAge = 60 * 60 * 24 * 365;
-        return `bgp_user=${encoded}; Path=/; Max-Age=${maxAge}; SameSite=Lax`;
+        return serializeCookie(
+            'bgp_user',
+            signValue(userId, config.security.cookieSecret),
+            buildCookieOptions({ maxAge })
+        );
     }
 }
 

@@ -7,6 +7,7 @@ class MemoryCache {
         this.cleanupInterval = setInterval(() => {
             this.cleanup();
         }, 10 * 60 * 1000);
+        this.cleanupInterval.unref?.();
     }
     
     /**

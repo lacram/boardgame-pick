@@ -153,6 +153,16 @@ body {
     padding: 6px 2px;
 }
 
+.user-mode-note {
+    margin-bottom: 10px;
+    padding: 7px 8px;
+    border-radius: 8px;
+    background: #fff8e6;
+    color: #7a5b00;
+    font-size: 11px;
+    line-height: 1.35;
+}
+
 .user-add {
     display: flex;
     gap: 6px;

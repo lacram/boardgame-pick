@@ -67,6 +67,12 @@ class GameValidator {
             errors.push('현재 상태값이 필요합니다.');
         }
 
+        ['currentFav', 'currentWishlist', 'currentOwned', 'currentPlanned'].forEach(field => {
+            if (body[field] !== undefined && !this._isValidToggleValue(body[field])) {
+                errors.push(`${field} 값은 boolean 또는 0/1이어야 합니다.`);
+            }
+        });
+
         return {
             isValid: errors.length === 0,
             errors
@@ -122,7 +128,8 @@ class GameValidator {
     // Private helper methods
 
     static _isPositiveInteger(value) {
-        const num = parseInt(value);
+        if (!/^[1-9]\d*$/.test(String(value))) return false;
+        const num = Number(value);
         return Number.isInteger(num) && num > 0;
     }
 
@@ -132,8 +139,13 @@ class GameValidator {
     }
 
     static _isValidRating(value) {
-        const num = parseInt(value);
+        if (!/^(10|[1-9])$/.test(String(value))) return false;
+        const num = Number(value);
         return Number.isInteger(num) && num >= 1 && num <= 10;
+    }
+
+    static _isValidToggleValue(value) {
+        return value === true || value === false || value === 1 || value === 0 || value === '1' || value === '0';
     }
 
     static _isValidPlayerSearch(value) {

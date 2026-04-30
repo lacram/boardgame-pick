@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<%= csrfToken || '' %>">
     <title>Boardgame Pick</title>
     <link rel="icon" href="/favicon.ico">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -32,10 +33,13 @@
                     <span id="currentUserLabel" class="user-label"><%= currentUserId %></span>
                 </button>
                 <div id="userMenuDropdown" class="user-dropdown" hidden>
-                    <div class="user-dropdown-title">유저 선택</div>
+                    <div class="user-dropdown-title">공유 프로필 선택</div>
                     <div id="userList" class="user-list"></div>
+                    <% if (localProfileMode) { %>
+                        <div class="user-mode-note">공유 로컬 프로필이며 보안 계정 로그인이 아닙니다.</div>
+                    <% } %>
                     <div class="user-add">
-                        <input type="text" id="newUserId" class="user-input" placeholder="새 유저 ID (영문/숫자/_/-)">
+                        <input type="text" id="newUserId" class="user-input" placeholder="새 프로필 ID (영문/숫자/_/-)">
                         <button id="addUserButton" class="user-add-button">추가</button>
                     </div>
                 </div>
@@ -112,7 +116,7 @@
                     <% } %>
                     <div class="game-content">
                         <div class="game-header-row">
-                            <a href="<%= game.url %>" target="_blank" class="game-title"><%= game.displayName %></a>
+                            <a href="<%= game.url %>" target="_blank" rel="noopener noreferrer" class="game-title"><%= game.displayName %></a>
                             <div class="game-top-actions">
                                 <button class="favorite-button <%= game.is_favorite ? 'active' : '' %>" 
                                         data-rowid="<%= game.bgg_id %>" 
@@ -253,6 +257,7 @@
         </div>
     </div>
 
+    <script src="/js/security.js"></script>
     <script src="/js/main.js"></script>
     <script src="/js/toggles.js"></script>
     <script src="/js/modals.js"></script>
