@@ -8,29 +8,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm start` - Run the production server (api/index.js)
 - `npm run dev` - Run development server with nodemon auto-reload
 
-### Database
-- Python scripts are located in `sqlite/` directory:
-  - `python sqlite/crawler.py` - Crawl BoardGameGeek data and populate database
-  - `python sqlite/db.py` - Database utility functions
-
 ## Architecture Overview
 
 This is a Korean boardgame recommendation web application with the following architecture:
 
 ### Backend (Node.js/Express)
 - **Main server**: `api/index.js` - Express server with EJS templating
-- **Database**: Supabase (PostgreSQL) as primary database, with SQLite utilities for data migration
+- **Database**: Supabase (PostgreSQL) as primary database
 - **Supabase client**: `supabase-client.js` - Database connection configuration
 
 ### Frontend
-- **Template engine**: EJS (`views/index.ejs`)
-- **Styling**: Inline CSS with responsive design
-- **JavaScript**: Vanilla JS for interactivity (favorites, ratings, modals)
+- **Template engine**: EJS (`views/index.ejs`, `views/mypage.ejs`)
+- **Styling**: Shared stylesheet in `public/css/styles.css`
+- **JavaScript**: Vanilla JS in `public/js/` for interactivity (users, toggles, ratings, modals)
 
 ### Data Sources
 - **BGG API**: Crawls BoardGameGeek.com for game data using XML API
+- **Sync scripts**: Node scripts in `scripts/` load BGG dump/detail data into Supabase
 - **Database tables**: 
   - `boardgames` - Game metadata (name, rating, weight, players, etc.)
+  - `user_data` - Per-user favorites, wishlist, owned/planned state, and personal ratings
   - `reviews` - User ratings and reviews
 
 ### Key Features
@@ -52,8 +49,3 @@ This is a Korean boardgame recommendation web application with the following arc
 - **Configuration**: `vercel.json` routes all requests to `api/index.js`
 - **Region**: Korea (`icn1`)
 - **Timeout**: 30 seconds max duration
-
-### Data Migration
-- SQLite scripts in `sqlite/` handle BGG data crawling and migration to Supabase
-- Crawler includes retry logic and rate limiting for BGG API calls
-- Database migration script: `sqlite/migrate-to-supabase.js`

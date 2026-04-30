@@ -105,25 +105,33 @@ boardgame-pick/
 │   └── index.js             # 메인 서버 파일
 ├── src/                     # 소스 코드
 │   ├── controllers/         # HTTP 요청/응답 처리
-│   │   └── gameController.js
+│   │   ├── cronController.js
+│   │   ├── gameController.js
+│   │   └── userController.js
 │   ├── services/           # 비즈니스 로직
-│   │   └── gameService.js
+│   │   ├── bggSyncService.js
+│   │   ├── gameService.js
+│   │   └── userService.js
 │   ├── middleware/         # 커스텀 미들웨어
 │   │   ├── cacheMiddleware.js
 │   │   ├── errorMiddleware.js
+│   │   ├── userMiddleware.js
 │   │   └── validationMiddleware.js
 │   ├── validators/         # 입력 검증
 │   │   └── gameValidator.js
 │   ├── routes/            # 라우터
 │   │   └── gameRoutes.js
-│   └── models/            # 데이터 모델 (향후 확장용)
 ├── public/                # 정적 파일
 │   ├── css/
 │   │   └── styles.css     # 메인 스타일시트
+│   ├── images/            # 런타임 UI 아이콘
+│   ├── icons/             # UI 시안용 아이콘
+│   ├── ui-preview.html    # UI 시안 미리보기
 │   └── js/                # 클라이언트 스크립트
 │       ├── main.js
 │       ├── modals.js
-│       └── toggles.js
+│       ├── toggles.js
+│       └── users.js
 ├── config/
 │   └── index.js           # 환경 설정
 ├── utils/
@@ -131,14 +139,16 @@ boardgame-pick/
 │   └── searchUtils.js     # 검색 유틸리티
 ├── views/                 # EJS 템플릿
 │   ├── index.ejs          # 메인 페이지
+│   ├── mypage.ejs         # 유저별 저장 게임/리뷰 페이지
 │   └── error.ejs          # 에러 페이지
-├── sqlite/                # SQLite 관련 스크립트
-│   ├── crawler.py         # BGG 데이터 크롤러
-│   ├── db.py             # 데이터베이스 유틸리티
-│   └── migrate-to-supabase.js
+├── scripts/               # Supabase/BGG 운영 스크립트
+│   ├── backfill-players-sets.js
+│   ├── sync-bgg-details.js
+│   └── sync-bgg-dump.js
 ├── supabase-client.js     # Supabase 클라이언트
 ├── database_indexes.sql   # 데이터베이스 인덱스
 ├── vercel.json           # Vercel 배포 설정
+├── AGENTS.md             # Codex 작업 지침
 └── CLAUDE.md             # AI 개발 가이드
 ```
 

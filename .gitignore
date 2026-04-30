@@ -20,6 +20,7 @@ venv.bak/
 *.db
 *.sqlite
 *.sqlite3
+sqlite/
 
 # IDE
 .vscode/
@@ -66,3 +67,8 @@ jspm_packages/
 
 # Vercel
 .vercel
+
+# Codex harness generated/local workspace
+.agents/
+.codex/
+codex-pack/
