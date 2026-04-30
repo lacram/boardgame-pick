@@ -1,6 +1,7 @@
 /**
  * 게임 관련 입력값 검증 유틸리티
  */
+const { isValidSortBy, isValidSortOrder } = require('../utils/sortUtils');
 
 class GameValidator {
     /**
@@ -43,6 +44,14 @@ class GameValidator {
 
         if (query.searchBest && !this._isValidPlayerSearch(query.searchBest)) {
             errors.push('베스트 인원 검색은 올바른 형식이어야 합니다. (예: 2, 2-4, 3|5)');
+        }
+
+        if (!isValidSortBy(query.sortBy)) {
+            errors.push('지원하지 않는 정렬 기준입니다.');
+        }
+
+        if (!isValidSortOrder(query.sortOrder)) {
+            errors.push('정렬 방향은 asc 또는 desc여야 합니다.');
         }
 
         return {

@@ -28,3 +28,16 @@ test('review validation accepts only integer ratings from 1 to 10', () => {
     assert.equal(GameValidator.validateReviewRequest({ bggId: '1', rating: '1abc' }).isValid, false);
     assert.equal(GameValidator.validateReviewRequest({ bggId: '1', rating: '0' }).isValid, false);
 });
+
+test('search validation accepts supported sort options only', () => {
+    assert.equal(GameValidator.validateSearchParams({ sortBy: 'myRating', sortOrder: 'asc' }).isValid, true);
+    assert.equal(GameValidator.validateSearchParams({ sortBy: 'play_time_min', sortOrder: 'desc' }).isValid, true);
+
+    const invalidField = GameValidator.validateSearchParams({ sortBy: 'drop table', sortOrder: 'desc' });
+    assert.equal(invalidField.isValid, false);
+    assert.match(invalidField.errors.join('\n'), /정렬 기준/);
+
+    const invalidOrder = GameValidator.validateSearchParams({ sortBy: 'rating', sortOrder: 'down' });
+    assert.equal(invalidOrder.isValid, false);
+    assert.match(invalidOrder.errors.join('\n'), /정렬 방향/);
+});

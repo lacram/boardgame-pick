@@ -1,5 +1,6 @@
 const gameService = require('../services/gameService');
 const config = require('../../config');
+const { normalizeSortBy, normalizeSortOrder } = require('../utils/sortUtils');
 
 function toBooleanState(value) {
     return value === true || value === 1 || value === '1';
@@ -231,8 +232,8 @@ class GameController {
             showWishlistOnly: query.showWishlistOnly === 'on',
             showOwnedOnly: query.showOwnedOnly === 'on',
             showPlannedOnly: query.showPlannedOnly === 'on',
-            sortBy: query.sortBy || config.defaultSortBy,
-            sortOrder: query.sortOrder || config.defaultSortOrder
+            sortBy: normalizeSortBy(query.sortBy, config.defaultSortBy),
+            sortOrder: normalizeSortOrder(query.sortOrder, config.defaultSortOrder)
         };
     }
 

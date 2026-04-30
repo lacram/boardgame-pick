@@ -94,6 +94,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_user_data_user_bgg
 -- database_indexes.sql 파일의 내용을 실행
 ```
 
+`database_indexes.sql`에는 `내 평점순(myRating)`을 DB에서 페이지 단위로 정렬하는
+`get_boardgames_sorted_by_my_rating` RPC도 포함되어 있습니다. 이 SQL을 아직 실행하지 않은
+환경에서는 앱이 기존 정렬 방식으로 fallback하지만, 대량 데이터에서는 SQL 실행 후 정렬 일관성과
+성능이 더 안정적입니다.
+
 ### 5. 개발 서버 실행
 
 ```bash

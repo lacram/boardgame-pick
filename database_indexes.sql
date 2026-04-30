@@ -146,6 +146,101 @@ CREATE INDEX IF NOT EXISTS idx_user_data_user_planned
 CREATE INDEX IF NOT EXISTS idx_user_data_user_rating
     ON user_data(user_id, my_rating DESC);
 
+-- 내 평점순 정렬 RPC
+-- 앱은 이 함수가 있으면 myRating 정렬을 DB 페이지 단위로 처리하고,
+-- 함수가 아직 없는 환경에서는 기존 앱 레벨 정렬로 안전하게 fallback합니다.
+CREATE OR REPLACE FUNCTION public.get_boardgames_sorted_by_my_rating(
+    p_user_id text,
+    p_search text DEFAULT '',
+    p_search_players int[] DEFAULT '{}',
+    p_search_best int[] DEFAULT '{}',
+    p_weight_min numeric DEFAULT NULL,
+    p_weight_max numeric DEFAULT NULL,
+    p_show_favorites_only boolean DEFAULT false,
+    p_show_wishlist_only boolean DEFAULT false,
+    p_show_owned_only boolean DEFAULT false,
+    p_show_planned_only boolean DEFAULT false,
+    p_sort_order text DEFAULT 'desc',
+    p_limit int DEFAULT 18,
+    p_offset int DEFAULT 0
+)
+RETURNS TABLE(game jsonb, total_count bigint)
+LANGUAGE sql
+STABLE
+AS $$
+    WITH filtered AS (
+        SELECT
+            b.id,
+            b.name,
+            b.korean_name,
+            b.rating,
+            b.weight,
+            b.players_recommended,
+            b.players_best,
+            b.players_recommended_raw,
+            b.players_best_raw,
+            b.bgg_id,
+            b.main_image_url,
+            b.url,
+            b.play_time_min,
+            b.play_time_max,
+            COALESCE(ud.is_favorite, false) AS is_favorite,
+            COALESCE(ud.is_wishlist, false) AS is_wishlist,
+            COALESCE(ud.is_owned, false) AS is_owned,
+            COALESCE(ud.is_planned, false) AS is_planned,
+            ud.my_rating
+        FROM boardgames b
+        LEFT JOIN user_data ud
+            ON ud.bgg_id = b.bgg_id
+            AND ud.user_id = p_user_id
+        WHERE
+            (
+                COALESCE(NULLIF(trim(p_search), ''), '') = ''
+                OR b.name ILIKE ('%' || p_search || '%')
+                OR b.korean_name ILIKE ('%' || p_search || '%')
+            )
+            AND (
+                COALESCE(array_length(p_search_players, 1), 0) = 0
+                OR b.players_recommended_set && p_search_players
+            )
+            AND (
+                COALESCE(array_length(p_search_best, 1), 0) = 0
+                OR b.players_best_set && p_search_best
+            )
+            AND (p_weight_min IS NULL OR b.weight >= p_weight_min)
+            AND (p_weight_max IS NULL OR b.weight <= p_weight_max)
+            AND (
+                NOT (
+                    p_show_favorites_only
+                    OR p_show_wishlist_only
+                    OR p_show_owned_only
+                    OR p_show_planned_only
+                )
+                OR (p_show_favorites_only AND COALESCE(ud.is_favorite, false))
+                OR (p_show_wishlist_only AND COALESCE(ud.is_wishlist, false))
+                OR (p_show_owned_only AND COALESCE(ud.is_owned, false))
+                OR (p_show_planned_only AND COALESCE(ud.is_planned, false))
+            )
+    ),
+    ranked AS (
+        SELECT
+            filtered.*,
+            COUNT(*) OVER () AS total_count
+        FROM filtered
+        ORDER BY
+            CASE WHEN filtered.my_rating IS NULL THEN 1 ELSE 0 END ASC,
+            CASE WHEN lower(p_sort_order) = 'asc' THEN filtered.my_rating END ASC NULLS LAST,
+            CASE WHEN lower(p_sort_order) <> 'asc' THEN filtered.my_rating END DESC NULLS LAST,
+            filtered.rating DESC NULLS LAST,
+            filtered.name ASC,
+            filtered.bgg_id ASC
+        LIMIT GREATEST(1, LEAST(COALESCE(p_limit, 18), 100))
+        OFFSET GREATEST(0, COALESCE(p_offset, 0))
+    )
+    SELECT to_jsonb(ranked) - 'total_count' AS game, ranked.total_count
+    FROM ranked;
+$$;
+
 -- BGG 동기화 상태 테이블
 CREATE TABLE IF NOT EXISTS sync_jobs (
     id bigserial PRIMARY KEY,
