@@ -255,12 +255,35 @@ async function safeLogErrors(rows) {
     }
 }
 
-async function loadCandidates(limit, jobType) {
+async function loadCandidates(limit, jobType, options = {}) {
     const parsedLimit = parseInt(limit, 10);
     const isLimited = Number.isFinite(parsedLimit) && parsedLimit > 0;
     const normalizedLimit = isLimited ? parsedLimit : (jobType === 'full' ? null : DEFAULT_SYNC_LIMIT);
     const seen = new Set();
     const candidates = [];
+
+    if (options.missingDetailsOnly) {
+        let query = supabase
+            .from('boardgames')
+            .select('bgg_id, last_detail_sync_at')
+            .is('last_detail_sync_at', null)
+            .order('bgg_id', { ascending: true });
+
+        if (isLimited) {
+            query = query.limit(normalizedLimit);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        for (const row of data || []) {
+            if (!row.bgg_id || seen.has(row.bgg_id)) continue;
+            candidates.push(row.bgg_id);
+            seen.add(row.bgg_id);
+        }
+
+        return candidates;
+    }
 
     if (jobType !== 'full') {
         const nowIso = new Date().toISOString();
@@ -478,9 +501,16 @@ async function runDetailSync(options = {}) {
         ? parsedLimit
         : (jobType === 'full' ? null : DEFAULT_SYNC_LIMIT);
     const requestedBy = options.requestedBy || 'manual';
-    const effectiveRateLimitMs = requestedBy === 'vercel-cron' && jobType === 'full'
+    const optionRateLimitMs = parseInt(options.rateLimitMs, 10);
+    const effectiveRateLimitMs = Number.isFinite(optionRateLimitMs) && optionRateLimitMs >= 0
+        ? optionRateLimitMs
+        : requestedBy === 'vercel-cron' && jobType === 'full'
         ? CRON_FULL_RATE_LIMIT_MS
         : RATE_LIMIT_MS;
+    const optionBatchSize = parseInt(options.batchSize, 10);
+    const effectiveBatchSize = Number.isFinite(optionBatchSize) && optionBatchSize > 0
+        ? optionBatchSize
+        : BATCH_SIZE;
 
     const jobId = await safeInsertJob({
         job_type: jobType,
@@ -497,7 +527,8 @@ async function runDetailSync(options = {}) {
         jobType,
         requestedBy,
         limit,
-        batchSize: BATCH_SIZE,
+        batchSize: effectiveBatchSize,
+        rateLimitMs: effectiveRateLimitMs,
         totalCandidates: 0,
         successCount: 0,
         failCount: 0,
@@ -506,7 +537,9 @@ async function runDetailSync(options = {}) {
     };
 
     try {
-        const candidates = await loadCandidates(limit, jobType);
+        const candidates = await loadCandidates(limit, jobType, {
+            missingDetailsOnly: Boolean(options.missingDetailsOnly)
+        });
         result.totalCandidates = candidates.length;
         await safeUpdateJob(jobId, { total_count: candidates.length });
 
@@ -521,8 +554,8 @@ async function runDetailSync(options = {}) {
 
         await upsertSyncTargets(candidates, { next_sync_at: new Date().toISOString(), attempt_count: 0 });
 
-        for (let i = 0; i < candidates.length; i += BATCH_SIZE) {
-            const batch = candidates.slice(i, i + BATCH_SIZE);
+        for (let i = 0; i < candidates.length; i += effectiveBatchSize) {
+            const batch = candidates.slice(i, i + effectiveBatchSize);
             try {
                 const rows = await fetchDetails(batch);
                 await updateRows(rows);
@@ -549,7 +582,7 @@ async function runDetailSync(options = {}) {
                 })));
             }
 
-            if (i + BATCH_SIZE < candidates.length) {
+            if (i + effectiveBatchSize < candidates.length) {
                 await delay(effectiveRateLimitMs);
             }
         }

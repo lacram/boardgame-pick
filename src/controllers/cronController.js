@@ -1,4 +1,5 @@
 const bggSyncService = require('../services/bggSyncService');
+const bggDiscoveryService = require('../services/bggDiscoveryService');
 const config = require('../../config');
 const {
     isCronAuthorized,
@@ -31,19 +32,37 @@ class CronController {
         const isVercelCron = Boolean(req.headers['x-vercel-cron']);
         const jobType = normalizeJobType(req.query.jobType || req.body?.jobType || (isVercelCron ? 'full' : 'incremental'));
         const limit = normalizeLimit(req.query.limit || req.body?.limit, config.cron.maxSyncLimit);
+        const dumpLimit = normalizeLimit(req.query.dumpLimit || req.body?.dumpLimit, config.cron.maxDumpLimit);
         const force = parseBoolean(req.query.force || req.body?.force);
+        const shouldDiscover = req.query.discover !== undefined || req.body?.discover !== undefined
+            ? parseBoolean(req.query.discover || req.body?.discover)
+            : isVercelCron;
+        const shouldSyncDetails = req.query.detail !== undefined || req.body?.detail !== undefined
+            ? parseBoolean(req.query.detail || req.body?.detail)
+            : true;
         const requestedBy = isVercelCron ? 'vercel-cron' : 'api';
 
         try {
-            const result = await bggSyncService.runDetailSync({
-                jobType: force ? 'full' : jobType,
-                limit,
-                requestedBy
-            });
+            const discovery = shouldDiscover
+                ? await bggDiscoveryService.runDumpSync({
+                    limit: dumpLimit,
+                    requestedBy
+                })
+                : null;
+            const detail = shouldSyncDetails
+                ? await bggSyncService.runDetailSync({
+                    jobType: force ? 'full' : jobType,
+                    limit,
+                    requestedBy
+                })
+                : null;
 
             return res.json({
                 success: true,
-                result
+                result: {
+                    discovery,
+                    detail
+                }
             });
         } catch (error) {
             console.error('BGG sync cron error:', error);

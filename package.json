@@ -10,7 +10,9 @@
     "test": "node --test",
     "audit": "npm audit --omit=dev",
     "sync:dump": "node scripts/sync-bgg-dump.js",
+    "sync:dump:url": "node scripts/download-and-sync-bgg-dump.js",
     "sync:details": "node scripts/sync-bgg-details.js",
+    "backfill:bgg-details": "node scripts/backfill-bgg-details.js",
     "backfill:players": "node scripts/backfill-players-sets.js"
   },
   "dependencies": {

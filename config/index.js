@@ -33,7 +33,8 @@ const config = {
     cron: {
         secret: process.env.CRON_SECRET || '',
         defaultSyncLimit: parseInteger(process.env.BGG_DETAIL_SYNC_LIMIT, 200),
-        maxSyncLimit: parseInteger(process.env.BGG_DETAIL_MAX_SYNC_LIMIT, 500)
+        maxSyncLimit: parseInteger(process.env.BGG_DETAIL_MAX_SYNC_LIMIT, 500),
+        maxDumpLimit: parseInteger(process.env.BGG_DUMP_MAX_SYNC_LIMIT, 50000)
     },
 
     // 보안/공유 로컬 프로필 설정

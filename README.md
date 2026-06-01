@@ -106,6 +106,38 @@ npm run dev  # 개발용 (nodemon)
 npm start    # 프로덕션용
 ```
 
+### BGG 동기화
+
+Vercel Cron은 `/api/cron/sync-bgg`를 주 1회 호출합니다. Cron 요청에서는 먼저 BGG ranks dump를 읽어
+신규 `bgg_id`를 `boardgames`에 upsert하고, 이어서 기존 상세 동기화가 BGG XML API로 인원, 평점,
+난이도, 카테고리, 메커니즘 같은 상세 필드를 갱신합니다.
+
+수동 실행:
+
+```bash
+npm run sync:dump              # BGG ranks dump 기반 신규 목록 발견
+npm run sync:dump -- --limit=1000
+npm run sync:dump -- --file="/path/to/boardgames_ranks.csv"
+npm run sync:dump:url -- --url="https://..." --output="./tmp/boardgames_ranks.csv"
+npm run sync:details           # 상세 정보 증분 동기화
+npm run sync:details -- --full # 기존 목록 전체 상세 동기화
+npm run backfill:bgg-details -- --chunk=1000 --rounds=10 --rateLimitMs=5000 --batchSize=20
+```
+
+`sync:dump:url`은 BGG의 `Click to Download` 링크를 받아 ZIP 또는 CSV를 다운로드하고, CSV를 로컬에 저장한 뒤
+동일한 dump sync 로직으로 `boardgames`에 upsert합니다. 다운로드 링크는 BGG에 로그인한 브라우저에서
+`https://boardgamegeek.com/data_dumps/bg_ranks`에 접속한 뒤 `Click to Download` 링크 주소를 복사해서 사용합니다.
+
+대량 백필은 Vercel Cron 대신 `backfill:bgg-details`를 로컬/서버에서 실행합니다. 각 라운드는
+`last_detail_sync_at`이 비어 있는 게임을 최대 `chunk`개까지 상세 동기화하고, 중단되면 다음 실행에서
+남은 항목을 이어서 처리합니다.
+
+크론 API 옵션:
+- `discover=false`: dump 기반 신규 목록 발견을 건너뜁니다.
+- `detail=false`: 상세 동기화를 건너뜁니다.
+- `dumpLimit=1000`: 이번 요청에서 발견/upsert할 dump 행 수를 제한합니다.
+- `limit=100`: 이번 요청에서 상세 동기화할 게임 수를 제한합니다.
+
 ## 프로젝트 구조
 
 ```
@@ -118,6 +150,7 @@ boardgame-pick/
 │   │   ├── gameController.js
 │   │   └── userController.js
 │   ├── services/           # 비즈니스 로직
+│   │   ├── bggDiscoveryService.js
 │   │   ├── bggSyncService.js
 │   │   ├── gameService.js
 │   │   └── userService.js
