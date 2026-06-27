@@ -4,8 +4,7 @@ const config = require('../../config');
 const {
     SORT_FIELDS,
     normalizeSortBy,
-    normalizeSortOrder,
-    isMissingMyRatingRpc
+    normalizeSortOrder
 } = require('../utils/sortUtils');
 
 function quotePostgrestValue(value) {
@@ -61,22 +60,15 @@ class GameService {
         const needsMyRatingSort = normalizedSortBy === 'myRating';
 
         if (needsMyRatingSort) {
-            const rpcResult = await this._handleMyRatingSearchWithRpc({
+            const result = await this._handleMyRatingSearch({
                 ...searchParams,
                 sortBy: normalizedSortBy,
                 sortOrder: normalizedSortOrder
-            }, userId);
+            }, userId, userFilteredIds);
 
-            if (rpcResult) {
-                const { games, total } = rpcResult;
-                if (games.length > 0) {
-                    this._normalizeUserDataFields(games);
-                    this._decorateGames(games);
-                }
-                const totalPages = Math.max(1, Math.ceil(total / config.pageSize));
-                const lastSyncAt = await this._getLastSyncAt();
-                return { games, total, totalPages, lastSyncAt };
-            }
+            const totalPages = Math.max(1, Math.ceil(result.total / config.pageSize));
+            const lastSyncAt = await this._getLastSyncAt();
+            return { ...result, totalPages, lastSyncAt };
         }
 
         let query = supabase
@@ -86,7 +78,7 @@ class GameService {
                 players_recommended, players_best, players_recommended_raw, players_best_raw,
                 bgg_id, main_image_url, url, 
                 play_time_min, play_time_max
-            `, { count: needsMyRatingSort ? 'exact' : 'exact' });
+            `, { count: 'estimated' });
 
         query = this._applyFilters(query, {
             search, searchPlayers, searchBest, weightMin, weightMax
@@ -222,44 +214,164 @@ class GameService {
         };
     }
 
-    async _handleMyRatingSearchWithRpc(searchParams, userId) {
+    async _handleMyRatingSearch(searchParams, userId, userFilteredIds) {
         const {
-            search, searchPlayers, searchBest,
-            weightMin, weightMax, showFavoritesOnly, showWishlistOnly, showOwnedOnly, showPlannedOnly,
+            showFavoritesOnly, showWishlistOnly, showOwnedOnly, showPlannedOnly,
             sortOrder, page
         } = searchParams;
 
-        const { data, error } = await supabase.rpc('get_boardgames_sorted_by_my_rating', {
-            p_user_id: userId,
-            p_search: (search || '').trim(),
-            p_search_players: parsePlayersToSet(searchPlayers || ''),
-            p_search_best: parsePlayersToSet(searchBest || ''),
-            p_weight_min: weightMin ? Number.parseFloat(weightMin) : null,
-            p_weight_max: weightMax ? Number.parseFloat(weightMax) : null,
-            p_show_favorites_only: Boolean(showFavoritesOnly),
-            p_show_wishlist_only: Boolean(showWishlistOnly),
-            p_show_owned_only: Boolean(showOwnedOnly),
-            p_show_planned_only: Boolean(showPlannedOnly),
-            p_sort_order: sortOrder,
-            p_limit: config.pageSize,
-            p_offset: (page - 1) * config.pageSize
-        });
+        let ratedQuery = supabase
+            .from('user_data')
+            .select('bgg_id, is_favorite, is_wishlist, is_owned, is_planned, my_rating')
+            .eq('user_id', userId)
+            .not('my_rating', 'is', null);
 
-        if (error) {
-            if (isMissingMyRatingRpc(error)) {
-                console.warn('내 평점 DB 정렬 RPC가 없어 기존 앱 정렬 방식으로 fallback합니다.');
-                return null;
-            }
-            throw error;
+        ratedQuery = this._applyUserFlagFilters(ratedQuery, {
+            showFavoritesOnly,
+            showWishlistOnly,
+            showOwnedOnly,
+            showPlannedOnly
+        });
+        ratedQuery = ratedQuery.order('my_rating', { ascending: sortOrder === 'asc' }).order('bgg_id');
+
+        const { data: ratedRows, error: ratedError } = await ratedQuery;
+        if (ratedError) throw ratedError;
+
+        const ratedUserRows = ratedRows || [];
+        const ratedIds = ratedUserRows.map(row => row.bgg_id);
+        const ratedGames = await this._getFilteredRatedGames(searchParams, ratedUserRows);
+        const total = await this._getFilteredGameCount(searchParams, userFilteredIds);
+
+        const from = (page - 1) * config.pageSize;
+        const ratedSlice = ratedGames.slice(from, from + config.pageSize);
+        let games = ratedSlice;
+
+        if (games.length < config.pageSize && from + games.length < total) {
+            const unratedOffset = Math.max(0, from - ratedGames.length);
+            const unratedLimit = config.pageSize - games.length;
+            const unratedGames = await this._getUnratedGames(searchParams, {
+                userId,
+                userFilteredIds,
+                ratedIds,
+                offset: unratedOffset,
+                limit: unratedLimit
+            });
+            games = games.concat(unratedGames);
         }
 
-        const rows = data || [];
-        const games = rows
-            .map(row => row.game || row)
-            .filter(Boolean);
-        const total = rows.length > 0 ? Number(rows[0].total_count || 0) : 0;
+        if (games.length > 0) {
+            this._decorateGames(games);
+        }
 
         return { games, total };
+    }
+
+    _applyUserFlagFilters(query, filters) {
+        const { showFavoritesOnly, showWishlistOnly, showOwnedOnly, showPlannedOnly } = filters;
+        const flagFilters = [];
+        if (showFavoritesOnly) flagFilters.push('is_favorite.eq.true');
+        if (showWishlistOnly) flagFilters.push('is_wishlist.eq.true');
+        if (showOwnedOnly) flagFilters.push('is_owned.eq.true');
+        if (showPlannedOnly) flagFilters.push('is_planned.eq.true');
+
+        if (flagFilters.length > 1) {
+            return query.or(flagFilters.join(','));
+        }
+        if (flagFilters.length === 1) {
+            const [column] = flagFilters[0].split('.');
+            return query.eq(column, true);
+        }
+        return query;
+    }
+
+    _buildBoardgameQuery(searchParams, select, options = {}) {
+        let query = supabase
+            .from('boardgames')
+            .select(select, options);
+
+        return this._applyFilters(query, {
+            search: searchParams.search,
+            searchPlayers: searchParams.searchPlayers,
+            searchBest: searchParams.searchBest,
+            weightMin: searchParams.weightMin,
+            weightMax: searchParams.weightMax
+        });
+    }
+
+    async _getFilteredRatedGames(searchParams, ratedUserRows) {
+        if (ratedUserRows.length === 0) return [];
+
+        const ratedIds = ratedUserRows.map(row => row.bgg_id);
+        let query = this._buildBoardgameQuery(searchParams, `
+            id, name, korean_name, rating, weight,
+            players_recommended, players_best, players_recommended_raw, players_best_raw,
+            bgg_id, main_image_url, url,
+            play_time_min, play_time_max
+        `).in('bgg_id', ratedIds);
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        const gameMap = new Map((data || []).map(game => [game.bgg_id, game]));
+        return ratedUserRows
+            .map(row => {
+                const game = gameMap.get(row.bgg_id);
+                if (!game) return null;
+                return {
+                    ...game,
+                    is_favorite: Boolean(row.is_favorite),
+                    is_wishlist: Boolean(row.is_wishlist),
+                    is_owned: Boolean(row.is_owned),
+                    is_planned: Boolean(row.is_planned),
+                    my_rating: row.my_rating || null
+                };
+            })
+            .filter(Boolean);
+    }
+
+    async _getFilteredGameCount(searchParams, userFilteredIds) {
+        let query = this._buildBoardgameQuery(searchParams, 'bgg_id', {
+            count: 'estimated',
+            head: true
+        });
+
+        if (userFilteredIds) {
+            query = query.in('bgg_id', userFilteredIds);
+        }
+
+        const { count, error } = await query;
+        if (error) throw error;
+        return count || 0;
+    }
+
+    async _getUnratedGames(searchParams, params) {
+        const { userId, userFilteredIds, ratedIds, offset, limit } = params;
+        let query = this._buildBoardgameQuery(searchParams, `
+            id, name, korean_name, rating, weight,
+            players_recommended, players_best, players_recommended_raw, players_best_raw,
+            bgg_id, main_image_url, url,
+            play_time_min, play_time_max
+        `);
+
+        if (userFilteredIds) {
+            query = query.in('bgg_id', userFilteredIds);
+        }
+        if (ratedIds.length > 0) {
+            query = query.not('bgg_id', 'in', `(${ratedIds.join(',')})`);
+        }
+
+        query = query
+            .order('rating', { ascending: false })
+            .order('name', { ascending: true })
+            .range(offset, offset + limit - 1);
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        const games = data || [];
+        const userDataMap = await this._getUserDataMap(userId, games.map(game => game.bgg_id));
+        this._mergeUserData(games, userDataMap);
+        return games;
     }
 
     async _getUserDataMap(userId, bggIds) {
