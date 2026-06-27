@@ -104,12 +104,63 @@
                 </div>
                 <button type="submit" class="search-button">🔍 검색</button>
             </div>
+            <details class="advanced-filter-panel" <%= category || mechanism ? 'open' : '' %>>
+                <summary class="advanced-filter-toggle">상세 필터</summary>
+                <div class="advanced-filter-content">
+                    <label class="filter-field">
+                        <span>게임 종류</span>
+                        <input type="text" name="category" placeholder="카드, 경제"
+                               value="<%= category %>" class="search-input">
+                    </label>
+                    <label class="filter-field">
+                        <span>진행 방식</span>
+                        <input type="text" name="mechanism" placeholder="덱빌딩, 일꾼 놓기"
+                               value="<%= mechanism %>" class="search-input">
+                    </label>
+                </div>
+            </details>
 
         </form>
 
+        <% if ((recommendations || []).length > 0) { %>
+            <section class="recommendation-section" aria-label="추천 게임">
+                <div class="section-heading-row">
+                    <h2 class="section-title">추천 게임</h2>
+                    <span class="section-subtitle">내 평점/찜 기반</span>
+                </div>
+                <div class="recommendation-strip">
+                    <% recommendations.forEach(function(game, index) { %>
+                        <a href="<%= game.url %>" target="_blank" rel="noopener noreferrer" class="recommendation-card">
+                            <% if (game.main_image_url) { %>
+                                <img src="<%= game.main_image_url %>" alt="<%= game.displayName %>"
+                                     class="recommendation-image" loading="<%= index === 0 ? 'eager' : 'lazy' %>"
+                                     decoding="async" width="180" height="120">
+                            <% } %>
+                            <div class="recommendation-body">
+                                <div class="recommendation-title"><%= game.displayName %></div>
+                                <div class="recommendation-meta">🌟 <%= game.rating || 0 %> | 난이도 <%= game.weight || 0 %></div>
+                                <div class="recommendation-reason"><%= game.reason %></div>
+                            </div>
+                        </a>
+                    <% }); %>
+                </div>
+            </section>
+        <% } else if (recommendationEmptyState) { %>
+            <div class="recommendation-empty">
+                추천을 만들려면 게임에 평점을 남기거나 즐겨찾기/위시리스트에 추가해 주세요.
+            </div>
+        <% } %>
+
         <!-- 게임 그리드 -->
-        <div class="game-grid">
-            <% games.forEach(function(game, index) { %>
+        <% if (games.length === 0) { %>
+            <div class="empty-results">
+                <div class="empty-title">조건에 맞는 게임이 없어요</div>
+                <div class="empty-message">필터를 줄이거나 검색어를 바꿔보세요.</div>
+                <a href="/" class="empty-reset">필터 초기화</a>
+            </div>
+        <% } else { %>
+            <div class="game-grid">
+                <% games.forEach(function(game, index) { %>
                 <div class="game-card">
                     <% if (game.main_image_url) { %>
                         <img src="<%= game.main_image_url %>" alt="<%= game.name %>" class="game-image"
@@ -172,8 +223,9 @@
                         </div>
                     </div>
                 </div>
-            <% }); %>
-        </div>
+                <% }); %>
+            </div>
+        <% } %>
 
         <!-- 페이지네이션 -->
         <% if (totalPages > 1) { %>

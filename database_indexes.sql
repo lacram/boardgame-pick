@@ -11,6 +11,8 @@ ALTER TABLE boardgames
     ADD COLUMN IF NOT EXISTS source_updated_at timestamptz,
     ADD COLUMN IF NOT EXISTS last_detail_sync_at timestamptz,
     ADD COLUMN IF NOT EXISTS detail_sync_status text,
+    ADD COLUMN IF NOT EXISTS category text,
+    ADD COLUMN IF NOT EXISTS mechanism text,
     ADD COLUMN IF NOT EXISTS players_best_raw text,
     ADD COLUMN IF NOT EXISTS players_best_min int,
     ADD COLUMN IF NOT EXISTS players_best_max int,
@@ -37,6 +39,14 @@ CREATE INDEX IF NOT EXISTS idx_boardgames_name_trgm
 
 CREATE INDEX IF NOT EXISTS idx_boardgames_korean_name_trgm
     ON boardgames USING gin (korean_name gin_trgm_ops);
+
+-- 운영 DB에서는 아래 두 GIN 인덱스를 트래픽이 적은 시간에 각각 별도 실행하는 것을 권장합니다.
+-- CREATE INDEX CONCURRENTLY는 트랜잭션 블록 안에서 실행할 수 없습니다.
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_boardgames_category_trgm
+    ON boardgames USING gin (category gin_trgm_ops);
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_boardgames_mechanism_trgm
+    ON boardgames USING gin (mechanism gin_trgm_ops);
 
 -- 8. players_recommended_set GIN 인덱스 (범위/단일 검색 최적화)
 CREATE INDEX IF NOT EXISTS idx_boardgames_players_recommended_set_gin

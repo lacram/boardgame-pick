@@ -11,7 +11,42 @@ function quotePostgrestValue(value) {
     return `"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 }
 
+const FILTER_ALIASES = {
+    category: {
+        '카드': 'Card Game',
+        '카드게임': 'Card Game',
+        '경제': 'Economic',
+        '파티': 'Party Game',
+        '추상': 'Abstract Strategy',
+        '전쟁': 'Wargame'
+    },
+    mechanism: {
+        '덱빌딩': 'Deck, Bag, and Pool Building',
+        '덱 빌딩': 'Deck, Bag, and Pool Building',
+        '일꾼 놓기': 'Worker Placement',
+        '워커플레이스먼트': 'Worker Placement',
+        '타일 놓기': 'Tile Placement',
+        '협력': 'Cooperative Game',
+        '경매': 'Auction/Bidding',
+        '주사위': 'Dice Rolling'
+    }
+};
+
+function normalizeAdvancedFilter(kind, value) {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) return '';
+    return FILTER_ALIASES[kind]?.[trimmed] || trimmed;
+}
+
+function escapeIlikePattern(value) {
+    return String(value).replace(/[\\%_]/g, match => `\\${match}`);
+}
+
 class GameService {
+    constructor(client = supabase) {
+        this._supabase = client;
+    }
+
     /**
      * 게임 목록을 가져오는 메인 서비스 함수
      */
@@ -34,7 +69,7 @@ class GameService {
             if (showOwnedOnly) flagFilters.push('is_owned.eq.true');
             if (showPlannedOnly) flagFilters.push('is_planned.eq.true');
 
-            let userQuery = supabase
+            let userQuery = this._supabase
                 .from('user_data')
                 .select('bgg_id')
                 .eq('user_id', userId);
@@ -71,17 +106,22 @@ class GameService {
             return { ...result, totalPages, lastSyncAt };
         }
 
-        let query = supabase
+        let query = this._supabase
             .from('boardgames')
             .select(`
                 id, name, korean_name, rating, weight,
                 players_recommended, players_best, players_recommended_raw, players_best_raw,
+                category, mechanism,
                 bgg_id, main_image_url, url, 
                 play_time_min, play_time_max
             `, { count: 'estimated' });
 
         query = this._applyFilters(query, {
-            search, searchPlayers, searchBest, weightMin, weightMax
+            search, searchPlayers, searchBest,
+            category: searchParams.category,
+            mechanism: searchParams.mechanism,
+            weightMin,
+            weightMax
         });
 
         if (userFilteredIds) {
@@ -126,7 +166,7 @@ class GameService {
     }
 
     async _getLastSyncAt() {
-        const { data, error } = await supabase
+        const { data, error } = await this._supabase
             .from('boardgames')
             .select('last_detail_sync_at')
             .not('last_detail_sync_at', 'is', null)
@@ -142,7 +182,7 @@ class GameService {
      */
     _applyFilters(query, filters) {
         const {
-            search, searchPlayers, searchBest,
+            search, searchPlayers, searchBest, category, mechanism,
             weightMin, weightMax
         } = filters;
 
@@ -160,6 +200,18 @@ class GameService {
             const bestSet = parsePlayersToSet(searchBest);
             if (bestSet.length > 0) {
                 query = query.overlaps('players_best_set', bestSet);
+            }
+        }
+        if (category) {
+            const normalizedCategory = normalizeAdvancedFilter('category', category);
+            if (normalizedCategory) {
+                query = query.ilike('category', `%${escapeIlikePattern(normalizedCategory)}%`);
+            }
+        }
+        if (mechanism) {
+            const normalizedMechanism = normalizeAdvancedFilter('mechanism', mechanism);
+            if (normalizedMechanism) {
+                query = query.ilike('mechanism', `%${escapeIlikePattern(normalizedMechanism)}%`);
             }
         }
         if (weightMin) {
@@ -220,7 +272,7 @@ class GameService {
             sortOrder, page
         } = searchParams;
 
-        let ratedQuery = supabase
+        let ratedQuery = this._supabase
             .from('user_data')
             .select('bgg_id, is_favorite, is_wishlist, is_owned, is_planned, my_rating')
             .eq('user_id', userId)
@@ -285,7 +337,7 @@ class GameService {
     }
 
     _buildBoardgameQuery(searchParams, select, options = {}) {
-        let query = supabase
+        let query = this._supabase
             .from('boardgames')
             .select(select, options);
 
@@ -293,6 +345,8 @@ class GameService {
             search: searchParams.search,
             searchPlayers: searchParams.searchPlayers,
             searchBest: searchParams.searchBest,
+            category: searchParams.category,
+            mechanism: searchParams.mechanism,
             weightMin: searchParams.weightMin,
             weightMax: searchParams.weightMax
         });
@@ -305,6 +359,7 @@ class GameService {
         let query = this._buildBoardgameQuery(searchParams, `
             id, name, korean_name, rating, weight,
             players_recommended, players_best, players_recommended_raw, players_best_raw,
+            category, mechanism,
             bgg_id, main_image_url, url,
             play_time_min, play_time_max
         `).in('bgg_id', ratedIds);
@@ -349,6 +404,7 @@ class GameService {
         let query = this._buildBoardgameQuery(searchParams, `
             id, name, korean_name, rating, weight,
             players_recommended, players_best, players_recommended_raw, players_best_raw,
+            category, mechanism,
             bgg_id, main_image_url, url,
             play_time_min, play_time_max
         `);
@@ -377,7 +433,7 @@ class GameService {
     async _getUserDataMap(userId, bggIds) {
         if (!bggIds || bggIds.length === 0) return new Map();
 
-        const { data, error } = await supabase
+        const { data, error } = await this._supabase
             .from('user_data')
             .select('bgg_id, is_favorite, is_wishlist, is_owned, is_planned, my_rating')
             .eq('user_id', userId)
@@ -443,7 +499,7 @@ class GameService {
     async toggleFavorite(userId, bggId, currentFav) {
         const newFav = currentFav ? 0 : 1;
         
-        const { error } = await supabase
+        const { error } = await this._supabase
             .from('user_data')
             .upsert([{ user_id: userId, bgg_id: bggId, is_favorite: newFav }], {
                 onConflict: 'user_id,bgg_id'
@@ -460,7 +516,7 @@ class GameService {
     async toggleWishlist(userId, bggId, currentWishlist) {
         const newWishlist = currentWishlist ? 0 : 1;
         
-        const { error } = await supabase
+        const { error } = await this._supabase
             .from('user_data')
             .upsert([{ user_id: userId, bgg_id: bggId, is_wishlist: newWishlist }], {
                 onConflict: 'user_id,bgg_id'
@@ -474,7 +530,7 @@ class GameService {
     async togglePlanned(userId, bggId, currentPlanned) {
         const newPlanned = currentPlanned ? 0 : 1;
         
-        const { error } = await supabase
+        const { error } = await this._supabase
             .from('user_data')
             .upsert([{ user_id: userId, bgg_id: bggId, is_planned: newPlanned }], {
                 onConflict: 'user_id,bgg_id'
@@ -491,7 +547,7 @@ class GameService {
     async toggleOwned(userId, bggId, currentOwned) {
         const newOwned = currentOwned ? 0 : 1;
         
-        const { error } = await supabase
+        const { error } = await this._supabase
             .from('user_data')
             .upsert([{ user_id: userId, bgg_id: bggId, is_owned: newOwned }], {
                 onConflict: 'user_id,bgg_id'
@@ -506,7 +562,7 @@ class GameService {
      * 리뷰 추가
      */
     async addReview(userId, bggId, rating, text) {
-        const { error } = await supabase
+        const { error } = await this._supabase
             .from('reviews')
             .upsert([{ user_id: userId, bgg_id: bggId, rating, text }], {
                 onConflict: 'user_id,bgg_id'
@@ -514,7 +570,7 @@ class GameService {
 
         if (error) throw error;
 
-        const { error: ratingError } = await supabase
+        const { error: ratingError } = await this._supabase
             .from('user_data')
             .upsert([{ user_id: userId, bgg_id: bggId, my_rating: rating }], {
                 onConflict: 'user_id,bgg_id'
@@ -529,7 +585,7 @@ class GameService {
      * 리뷰 조회
      */
     async getReview(userId, bggId) {
-        const { data, error } = await supabase
+        const { data, error } = await this._supabase
             .from('reviews')
             .select('rating, text')
             .eq('bgg_id', bggId)

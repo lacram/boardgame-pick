@@ -10,6 +10,8 @@
 - 📦 보유 게임 관리
 - 👥 인원수별 검색 (복잡한 범위 검색 지원: "2-4", "3|5")
 - 🎯 난이도(Weight) 필터링
+- 🔎 게임 종류/진행 방식 상세 필터 (예: 카드, 경제, 덱빌딩, 일꾼 놓기)
+- 🎲 개인 평점/찜 기반 추천 게임
 - 📝 개인 평점 및 리뷰 시스템
 - 👤 간단 유저 전환 (유저별 즐겨찾기/위시리스트/보유/플레이 예정/내 평점)
 - 📱 반응형 디자인
@@ -91,6 +93,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_user_data_user_bgg
 -- UPDATE user_data SET is_wishlist = is_scheduled WHERE is_scheduled = true;
 
 -- 인덱스 생성 (성능 최적화)
+-- 상세 필터와 추천에 필요한 category/mechanism 컬럼 및 인덱스 포함
 -- database_indexes.sql 파일의 내용을 실행
 ```
 

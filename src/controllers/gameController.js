@@ -1,4 +1,5 @@
 const gameService = require('../services/gameService');
+const recommendationService = require('../services/recommendationService');
 const config = require('../../config');
 const { normalizeSortBy, normalizeSortOrder } = require('../utils/sortUtils');
 
@@ -26,9 +27,12 @@ class GameController {
 
             // 게임 데이터 조회
             const { games, total, totalPages, lastSyncAt } = await gameService.getGames(searchParams, req.userId);
+            const recommendationResult = await this._loadRecommendations(searchParams, req.userId);
 
             const renderData = {
                 games,
+                recommendations: recommendationResult.recommendations,
+                recommendationEmptyState: recommendationResult.emptyState,
                 currentPage: searchParams.page,
                 totalPages,
                 total,
@@ -39,7 +43,9 @@ class GameController {
             };
 
             // 캐시 저장
-            req.cache.set(cacheKey, renderData);
+            if (!recommendationResult.failed) {
+                req.cache.set(cacheKey, renderData);
+            }
 
             res.render('index', renderData);
         } catch (error) {
@@ -222,6 +228,8 @@ class GameController {
             search: query.search || '',
             searchPlayers: query.searchPlayers || '',
             searchBest: query.searchBest || '',
+            category: query.category || '',
+            mechanism: query.mechanism || '',
             weightMin: query.weightMin || '',
             weightMax: query.weightMax || '',
             showFavoritesOnly: query.showFavoritesOnly === 'on',
@@ -238,11 +246,11 @@ class GameController {
      */
     _generateCacheKey(params, userId) {
         const { 
-            search, searchPlayers, searchBest, weightMin, weightMax,
+            search, searchPlayers, searchBest, category, mechanism, weightMin, weightMax,
             showFavoritesOnly, showWishlistOnly, showOwnedOnly, showPlannedOnly, sortBy, sortOrder, page 
         } = params;
         
-        return `${userId}-${search}-${searchPlayers}-${searchBest}-${weightMin}-${weightMax}-${showFavoritesOnly}-${showWishlistOnly}-${showOwnedOnly}-${showPlannedOnly}-${sortBy}-${sortOrder}-${page}`;
+        return `${userId}-${search}-${searchPlayers}-${searchBest}-${category}-${mechanism}-${weightMin}-${weightMax}-${showFavoritesOnly}-${showWishlistOnly}-${showOwnedOnly}-${showPlannedOnly}-${sortBy}-${sortOrder}-${page}`;
     }
 
     _clearUserCache(req) {
@@ -262,6 +270,8 @@ class GameController {
             search: params.search,
             searchPlayers: params.searchPlayers,
             searchBest: params.searchBest,
+            category: params.category,
+            mechanism: params.mechanism,
             weightMin: params.weightMin,
             weightMax: params.weightMax,
             showFavoritesOnly: params.showFavoritesOnly,
@@ -278,7 +288,7 @@ class GameController {
             const query = new URLSearchParams();
             query.set('page', String(page));
 
-            const stringParams = ['search', 'searchPlayers', 'searchBest', 'weightMin', 'weightMax'];
+            const stringParams = ['search', 'searchPlayers', 'searchBest', 'category', 'mechanism', 'weightMin', 'weightMax'];
             stringParams.forEach(key => {
                 if (params[key]) query.set(key, params[key]);
             });
@@ -292,6 +302,44 @@ class GameController {
             query.set('sortOrder', params.sortOrder);
             return `?${query.toString()}`;
         };
+    }
+
+    _shouldLoadRecommendations(params) {
+        if (params.page !== 1) return false;
+
+        const stringFilters = [
+            'search',
+            'searchPlayers',
+            'searchBest',
+            'category',
+            'mechanism',
+            'weightMin',
+            'weightMax'
+        ];
+        if (stringFilters.some(key => Boolean(params[key]))) return false;
+
+        return !params.showFavoritesOnly
+            && !params.showWishlistOnly
+            && !params.showOwnedOnly
+            && !params.showPlannedOnly;
+    }
+
+    async _loadRecommendations(params, userId) {
+        if (!this._shouldLoadRecommendations(params)) {
+            return { recommendations: [], emptyState: false, failed: false };
+        }
+
+        try {
+            const recommendations = await recommendationService.getRecommendations(userId, 3);
+            return {
+                recommendations,
+                emptyState: recommendations.length === 0,
+                failed: false
+            };
+        } catch (error) {
+            console.error('추천 게임 조회 오류:', error);
+            return { recommendations: [], emptyState: false, failed: true };
+        }
     }
 }
 

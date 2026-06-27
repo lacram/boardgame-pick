@@ -37,6 +37,14 @@ class GameValidator {
             errors.push('검색어는 100자를 초과할 수 없습니다.');
         }
 
+        if (query.category && query.category.length > 100) {
+            errors.push('게임 종류는 100자를 초과할 수 없습니다.');
+        }
+
+        if (query.mechanism && query.mechanism.length > 100) {
+            errors.push('진행 방식은 100자를 초과할 수 없습니다.');
+        }
+
         // 인원수 검색 검증
         if (query.searchPlayers && !this._isValidPlayerSearch(query.searchPlayers)) {
             errors.push('인원수 검색은 올바른 형식이어야 합니다. (예: 2, 2-4, 3|5)');

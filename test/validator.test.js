@@ -41,3 +41,16 @@ test('search validation accepts supported sort options only', () => {
     assert.equal(invalidOrder.isValid, false);
     assert.match(invalidOrder.errors.join('\n'), /정렬 방향/);
 });
+
+test('search validation limits advanced discovery filter length', () => {
+    assert.equal(GameValidator.validateSearchParams({ category: '카드', mechanism: '덱빌딩' }).isValid, true);
+
+    const longValue = '가'.repeat(101);
+    const invalidCategory = GameValidator.validateSearchParams({ category: longValue });
+    const invalidMechanism = GameValidator.validateSearchParams({ mechanism: longValue });
+
+    assert.equal(invalidCategory.isValid, false);
+    assert.match(invalidCategory.errors.join('\n'), /게임 종류/);
+    assert.equal(invalidMechanism.isValid, false);
+    assert.match(invalidMechanism.errors.join('\n'), /진행 방식/);
+});
