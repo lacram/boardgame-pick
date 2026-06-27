@@ -1,9 +1,8 @@
 // Modal functionality for rating and review
 
-function openRatingModal(bggId) {
+function openRatingModal(bggId, trigger) {
     currentBggId = bggId;
-    const button = event.target;
-    currentGameName = button.getAttribute('data-game-name');
+    currentGameName = trigger?.getAttribute('data-game-name') || '';
     
     selectedRating = 0;
     document.getElementById('reviewText').value = '';

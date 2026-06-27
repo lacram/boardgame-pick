@@ -155,7 +155,7 @@
                         <div class="game-info game-info-actions">
                             <span>🌟 <%= game.rating || 0 %> | 내 평점: <span id="myRating-<%= game.bgg_id %>"><%= game.myRating || '-' %></span></span>
                             <span class="game-actions">
-                                <button onclick="openRatingModal(<%= game.bgg_id %>)" 
+                                <button onclick="openRatingModal(<%= game.bgg_id %>, this)"
                                         data-game-name="<%= game.displayName %>"
                                         class="rating-button"
                                         aria-label="평점 입력">

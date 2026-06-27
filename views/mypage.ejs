@@ -168,7 +168,7 @@
                                     <div class="mypage-meta">🌟 <%= review.gameRating || 0 %> | 난이도 <%= review.weight || 0 %></div>
                                     <div class="mypage-meta">리뷰 평점 <strong><%= review.reviewRating %></strong></div>
                                     <div class="mypage-review-text"><%= review.text || '리뷰가 없습니다.' %></div>
-                                    <button class="mypage-edit-button" onclick="openRatingModal(<%= review.bgg_id %>)" data-game-name="<%= review.displayName %>">리뷰 수정</button>
+                                    <button class="mypage-edit-button" onclick="openRatingModal(<%= review.bgg_id %>, this)" data-game-name="<%= review.displayName %>">리뷰 수정</button>
                                 </div>
                             </div>
                         <% }); %>
