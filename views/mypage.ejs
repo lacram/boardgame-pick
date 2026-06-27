@@ -64,7 +64,8 @@
                         <% favorites.forEach(function(game) { %>
                             <div class="mypage-card">
                                 <% if (game.main_image_url) { %>
-                                    <img src="<%= game.main_image_url %>" alt="<%= game.displayName %>" class="mypage-image">
+                                    <img src="<%= game.main_image_url %>" alt="<%= game.displayName %>" class="mypage-image"
+                                         loading="lazy" decoding="async" width="300" height="160">
                                 <% } %>
                                 <div class="mypage-content">
                                     <a href="<%= game.url %>" target="_blank" rel="noopener noreferrer" class="mypage-name"><%= game.displayName %></a>
@@ -87,7 +88,8 @@
                         <% wishlist.forEach(function(game) { %>
                             <div class="mypage-card">
                                 <% if (game.main_image_url) { %>
-                                    <img src="<%= game.main_image_url %>" alt="<%= game.displayName %>" class="mypage-image">
+                                    <img src="<%= game.main_image_url %>" alt="<%= game.displayName %>" class="mypage-image"
+                                         loading="lazy" decoding="async" width="300" height="160">
                                 <% } %>
                                 <div class="mypage-content">
                                     <a href="<%= game.url %>" target="_blank" rel="noopener noreferrer" class="mypage-name"><%= game.displayName %></a>
@@ -110,7 +112,8 @@
                         <% owned.forEach(function(game) { %>
                             <div class="mypage-card">
                                 <% if (game.main_image_url) { %>
-                                    <img src="<%= game.main_image_url %>" alt="<%= game.displayName %>" class="mypage-image">
+                                    <img src="<%= game.main_image_url %>" alt="<%= game.displayName %>" class="mypage-image"
+                                         loading="lazy" decoding="async" width="300" height="160">
                                 <% } %>
                                 <div class="mypage-content">
                                     <a href="<%= game.url %>" target="_blank" rel="noopener noreferrer" class="mypage-name"><%= game.displayName %></a>
@@ -133,7 +136,8 @@
                         <% planned.forEach(function(game) { %>
                             <div class="mypage-card">
                                 <% if (game.main_image_url) { %>
-                                    <img src="<%= game.main_image_url %>" alt="<%= game.displayName %>" class="mypage-image">
+                                    <img src="<%= game.main_image_url %>" alt="<%= game.displayName %>" class="mypage-image"
+                                         loading="lazy" decoding="async" width="300" height="160">
                                 <% } %>
                                 <div class="mypage-content">
                                     <a href="<%= game.url %>" target="_blank" rel="noopener noreferrer" class="mypage-name"><%= game.displayName %></a>
@@ -156,7 +160,8 @@
                         <% reviews.forEach(function(review) { %>
                             <div class="mypage-card">
                                 <% if (review.main_image_url) { %>
-                                    <img src="<%= review.main_image_url %>" alt="<%= review.displayName %>" class="mypage-image">
+                                    <img src="<%= review.main_image_url %>" alt="<%= review.displayName %>" class="mypage-image"
+                                         loading="lazy" decoding="async" width="300" height="160">
                                 <% } %>
                                 <div class="mypage-content">
                                     <a href="<%= review.url %>" target="_blank" rel="noopener noreferrer" class="mypage-name"><%= review.displayName %></a>

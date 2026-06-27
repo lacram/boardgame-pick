@@ -34,6 +34,7 @@ class GameController {
                 total,
                 lastSyncAt,
                 currentUserId: req.userId,
+                buildPageUrl: this._buildPageUrlFactory(searchParams),
                 ...this._extractSearchParams(searchParams)
             };
 
@@ -265,6 +266,27 @@ class GameController {
             showPlannedOnly: params.showPlannedOnly,
             sortBy: params.sortBy,
             sortOrder: params.sortOrder
+        };
+    }
+
+    _buildPageUrlFactory(params) {
+        return function buildPageUrl(page) {
+            const query = new URLSearchParams();
+            query.set('page', String(page));
+
+            const stringParams = ['search', 'searchPlayers', 'searchBest', 'weightMin', 'weightMax'];
+            stringParams.forEach(key => {
+                if (params[key]) query.set(key, params[key]);
+            });
+
+            const flagParams = ['showFavoritesOnly', 'showWishlistOnly', 'showOwnedOnly', 'showPlannedOnly'];
+            flagParams.forEach(key => {
+                if (params[key]) query.set(key, 'on');
+            });
+
+            query.set('sortBy', params.sortBy);
+            query.set('sortOrder', params.sortOrder);
+            return `?${query.toString()}`;
         };
     }
 }

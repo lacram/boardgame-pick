@@ -302,6 +302,17 @@ body {
     box-shadow: 0 8px 16px rgba(27, 54, 93, 0.18);
 }
 
+.search-form.is-submitting {
+    opacity: 0.82;
+}
+
+.search-button:disabled {
+    cursor: wait;
+    opacity: 0.72;
+    transform: none;
+    box-shadow: none;
+}
+
 .checkbox-container {
     display: flex;
     align-items: center;
@@ -414,7 +425,9 @@ body {
 .game-image {
     width: 100%;
     height: 200px;
+    aspect-ratio: 3 / 2;
     object-fit: cover;
+    background: #eef2f6;
 }
 
 .game-content {
@@ -813,7 +826,9 @@ body {
 .mypage-image {
     width: 100%;
     height: 160px;
+    aspect-ratio: 15 / 8;
     object-fit: cover;
+    background: #eef2f6;
 }
 
 .mypage-content {

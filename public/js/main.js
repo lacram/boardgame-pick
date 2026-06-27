@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function initializeEventListeners() {
     initializeSearchSubmitShortcut();
+    initializeSearchPendingState();
 
     // Favorite buttons
     const favoriteButtons = document.querySelectorAll('.favorite-button');
@@ -52,6 +53,23 @@ function initializeEventListeners() {
             const currentOwned = this.getAttribute('data-owned');
             toggleOwned(this, parseInt(rowId), parseInt(currentOwned));
         });
+    });
+}
+
+function initializeSearchPendingState() {
+    const searchForm = document.querySelector('.search-form');
+    if (!searchForm) return;
+
+    searchForm.addEventListener('submit', function() {
+        const submitButton = searchForm.querySelector('.search-button');
+        searchForm.setAttribute('aria-busy', 'true');
+        searchForm.classList.add('is-submitting');
+
+        if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.dataset.originalText = submitButton.textContent;
+            submitButton.textContent = '검색 중...';
+        }
     });
 }
 

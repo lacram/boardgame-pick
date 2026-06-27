@@ -109,10 +109,11 @@
 
         <!-- 게임 그리드 -->
         <div class="game-grid">
-            <% games.forEach(function(game) { %>
+            <% games.forEach(function(game, index) { %>
                 <div class="game-card">
                     <% if (game.main_image_url) { %>
-                        <img src="<%= game.main_image_url %>" alt="<%= game.name %>" class="game-image">
+                        <img src="<%= game.main_image_url %>" alt="<%= game.name %>" class="game-image"
+                             loading="<%= index < 6 ? 'eager' : 'lazy' %>" decoding="async" width="300" height="200">
                     <% } %>
                     <div class="game-content">
                         <div class="game-header-row">
@@ -178,17 +179,17 @@
         <% if (totalPages > 1) { %>
             <div class="pagination">
                 <% if (currentPage > 1) { %>
-                    <a href="?page=<%= currentPage - 1 %>&search=<%= search %>&searchPlayers=<%= searchPlayers %>&searchBest=<%= searchBest %>&weightMin=<%= weightMin %>&weightMax=<%= weightMax %>&showFavoritesOnly=<%= showFavoritesOnly ? 'on' : '' %>&showWishlistOnly=<%= showWishlistOnly ? 'on' : '' %>&showOwnedOnly=<%= showOwnedOnly ? 'on' : '' %>&showPlannedOnly=<%= showPlannedOnly ? 'on' : '' %>&sortBy=<%= sortBy %>&sortOrder=<%= sortOrder %>" 
+                    <a href="<%= buildPageUrl(currentPage - 1) %>"
                        class="page-button">◀ 이전</a>
                 <% } %>
                 
                 <% for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) { %>
-                    <a href="?page=<%= i %>&search=<%= search %>&searchPlayers=<%= searchPlayers %>&searchBest=<%= searchBest %>&weightMin=<%= weightMin %>&weightMax=<%= weightMax %>&showFavoritesOnly=<%= showFavoritesOnly ? 'on' : '' %>&showWishlistOnly=<%= showWishlistOnly ? 'on' : '' %>&showOwnedOnly=<%= showOwnedOnly ? 'on' : '' %>&showPlannedOnly=<%= showPlannedOnly ? 'on' : '' %>&sortBy=<%= sortBy %>&sortOrder=<%= sortOrder %>" 
+                    <a href="<%= buildPageUrl(i) %>"
                        class="page-button <%= i === currentPage ? 'active' : '' %>"><%= i %></a>
                 <% } %>
                 
                 <% if (currentPage < totalPages) { %>
-                    <a href="?page=<%= currentPage + 1 %>&search=<%= search %>&searchPlayers=<%= searchPlayers %>&searchBest=<%= searchBest %>&weightMin=<%= weightMin %>&weightMax=<%= weightMax %>&showFavoritesOnly=<%= showFavoritesOnly ? 'on' : '' %>&showWishlistOnly=<%= showWishlistOnly ? 'on' : '' %>&showOwnedOnly=<%= showOwnedOnly ? 'on' : '' %>&showPlannedOnly=<%= showPlannedOnly ? 'on' : '' %>&sortBy=<%= sortBy %>&sortOrder=<%= sortOrder %>" 
+                    <a href="<%= buildPageUrl(currentPage + 1) %>"
                        class="page-button">다음 ▶</a>
                 <% } %>
             </div>
