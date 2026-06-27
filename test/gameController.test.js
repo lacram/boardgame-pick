@@ -24,19 +24,19 @@ test('pagination urls preserve and encode active search filters', () => {
 test('pagination urls preserve advanced discovery filters', () => {
     const params = gameController._parseSearchParams({
         page: '1',
-        category: '카드',
-        mechanism: '덱빌딩',
+        category: 'Card Game',
+        mechanism: 'Deck, Bag, and Pool Building',
         sortBy: 'rating',
         sortOrder: 'desc'
     });
 
-    assert.equal(params.category, '카드');
-    assert.equal(params.mechanism, '덱빌딩');
+    assert.equal(params.category, 'Card Game');
+    assert.equal(params.mechanism, 'Deck, Bag, and Pool Building');
 
     const buildPageUrl = gameController._buildPageUrlFactory(params);
     assert.equal(
         buildPageUrl(2),
-        '?page=2&category=%EC%B9%B4%EB%93%9C&mechanism=%EB%8D%B1%EB%B9%8C%EB%94%A9&sortBy=rating&sortOrder=desc'
+        '?page=2&category=Card+Game&mechanism=Deck%2C+Bag%2C+and+Pool+Building&sortBy=rating&sortOrder=desc'
     );
 });
 
@@ -58,4 +58,15 @@ test('recommendations render only on first unfiltered page', () => {
     assert.equal(gameController._shouldLoadRecommendations(gameController._parseSearchParams({ page: '2' })), false);
     assert.equal(gameController._shouldLoadRecommendations(gameController._parseSearchParams({ search: 'cat' })), false);
     assert.equal(gameController._shouldLoadRecommendations(gameController._parseSearchParams({ category: '카드' })), false);
+});
+
+test('render params include selectable discovery filter options', () => {
+    const params = gameController._parseSearchParams({
+        category: 'Card Game',
+        mechanism: 'Worker Placement'
+    });
+    const renderParams = gameController._extractSearchParams(params);
+
+    assert.ok(renderParams.categoryOptions.some(option => option.label === '카드' && option.value === 'Card Game'));
+    assert.ok(renderParams.mechanismOptions.some(option => option.label === '일꾼 놓기' && option.value === 'Worker Placement'));
 });

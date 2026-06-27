@@ -109,13 +109,21 @@
                 <div class="advanced-filter-content">
                     <label class="filter-field">
                         <span>게임 종류</span>
-                        <input type="text" name="category" placeholder="카드, 경제"
-                               value="<%= category %>" class="search-input">
+                        <select name="category" class="search-input">
+                            <option value="">전체</option>
+                            <% categoryOptions.forEach(function(option) { %>
+                                <option value="<%= option.value %>" <%= category === option.value ? 'selected' : '' %>><%= option.label %></option>
+                            <% }); %>
+                        </select>
                     </label>
                     <label class="filter-field">
                         <span>진행 방식</span>
-                        <input type="text" name="mechanism" placeholder="덱빌딩, 일꾼 놓기"
-                               value="<%= mechanism %>" class="search-input">
+                        <select name="mechanism" class="search-input">
+                            <option value="">전체</option>
+                            <% mechanismOptions.forEach(function(option) { %>
+                                <option value="<%= option.value %>" <%= mechanism === option.value ? 'selected' : '' %>><%= option.label %></option>
+                            <% }); %>
+                        </select>
                     </label>
                 </div>
             </details>

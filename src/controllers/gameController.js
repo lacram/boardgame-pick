@@ -2,6 +2,10 @@ const gameService = require('../services/gameService');
 const recommendationService = require('../services/recommendationService');
 const config = require('../../config');
 const { normalizeSortBy, normalizeSortOrder } = require('../utils/sortUtils');
+const {
+    CATEGORY_OPTIONS,
+    MECHANISM_OPTIONS
+} = require('../utils/discoveryFilters');
 
 function toBooleanState(value) {
     return value === true || value === 1 || value === '1';
@@ -272,6 +276,8 @@ class GameController {
             searchBest: params.searchBest,
             category: params.category,
             mechanism: params.mechanism,
+            categoryOptions: CATEGORY_OPTIONS,
+            mechanismOptions: MECHANISM_OPTIONS,
             weightMin: params.weightMin,
             weightMax: params.weightMax,
             showFavoritesOnly: params.showFavoritesOnly,

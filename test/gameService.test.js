@@ -47,6 +47,20 @@ test('advanced filters normalize Korean aliases and apply category and mechanism
     ]);
 });
 
+test('advanced filters accept canonical option values from select controls', () => {
+    const query = new MockQuery();
+
+    gameService._applyFilters(query, {
+        category: 'Economic',
+        mechanism: 'Worker Placement'
+    });
+
+    assert.deepEqual(query.calls, [
+        ['ilike', 'category', '%Economic%'],
+        ['ilike', 'mechanism', '%Worker Placement%']
+    ]);
+});
+
 test('advanced filters escape SQL wildcard characters before ilike', () => {
     const query = new MockQuery();
 

@@ -6,36 +6,10 @@ const {
     normalizeSortBy,
     normalizeSortOrder
 } = require('../utils/sortUtils');
+const { normalizeDiscoveryFilter } = require('../utils/discoveryFilters');
 
 function quotePostgrestValue(value) {
     return `"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
-}
-
-const FILTER_ALIASES = {
-    category: {
-        '카드': 'Card Game',
-        '카드게임': 'Card Game',
-        '경제': 'Economic',
-        '파티': 'Party Game',
-        '추상': 'Abstract Strategy',
-        '전쟁': 'Wargame'
-    },
-    mechanism: {
-        '덱빌딩': 'Deck, Bag, and Pool Building',
-        '덱 빌딩': 'Deck, Bag, and Pool Building',
-        '일꾼 놓기': 'Worker Placement',
-        '워커플레이스먼트': 'Worker Placement',
-        '타일 놓기': 'Tile Placement',
-        '협력': 'Cooperative Game',
-        '경매': 'Auction/Bidding',
-        '주사위': 'Dice Rolling'
-    }
-};
-
-function normalizeAdvancedFilter(kind, value) {
-    const trimmed = String(value || '').trim();
-    if (!trimmed) return '';
-    return FILTER_ALIASES[kind]?.[trimmed] || trimmed;
 }
 
 function escapeIlikePattern(value) {
@@ -203,13 +177,13 @@ class GameService {
             }
         }
         if (category) {
-            const normalizedCategory = normalizeAdvancedFilter('category', category);
+            const normalizedCategory = normalizeDiscoveryFilter('category', category);
             if (normalizedCategory) {
                 query = query.ilike('category', `%${escapeIlikePattern(normalizedCategory)}%`);
             }
         }
         if (mechanism) {
-            const normalizedMechanism = normalizeAdvancedFilter('mechanism', mechanism);
+            const normalizedMechanism = normalizeDiscoveryFilter('mechanism', mechanism);
             if (normalizedMechanism) {
                 query = query.ilike('mechanism', `%${escapeIlikePattern(normalizedMechanism)}%`);
             }
