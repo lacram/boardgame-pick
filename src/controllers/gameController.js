@@ -65,8 +65,7 @@ class GameController {
 
             const result = await gameService.toggleFavorite(req.userId, rowId, toBooleanState(currentFav));
             
-            // 캐시 무효화
-            req.cache.clear();
+            this._clearUserCache(req);
             
             res.json({ success: true, ...result });
         } catch (error) {
@@ -92,8 +91,7 @@ class GameController {
 
             const result = await gameService.toggleWishlist(req.userId, rowId, toBooleanState(currentWishlist));
             
-            // 캐시 무효화
-            req.cache.clear();
+            this._clearUserCache(req);
             
             res.json({ success: true, ...result });
         } catch (error) {
@@ -119,8 +117,7 @@ class GameController {
 
             const result = await gameService.togglePlanned(req.userId, rowId, toBooleanState(currentPlanned));
             
-            // 캐시 무효화
-            req.cache.clear();
+            this._clearUserCache(req);
             
             res.json({ success: true, ...result });
         } catch (error) {
@@ -146,8 +143,7 @@ class GameController {
 
             const result = await gameService.toggleOwned(req.userId, rowId, toBooleanState(currentOwned));
             
-            // 캐시 무효화
-            req.cache.clear();
+            this._clearUserCache(req);
             
             res.json({ success: true, ...result });
         } catch (error) {
@@ -179,8 +175,7 @@ class GameController {
 
             const result = await gameService.addReview(req.userId, bggId, rating, text);
             
-            // 캐시 무효화
-            req.cache.clear();
+            this._clearUserCache(req);
             
             res.json({ success: true, ...result });
         } catch (error) {
@@ -248,6 +243,15 @@ class GameController {
         } = params;
         
         return `${userId}-${search}-${searchPlayers}-${searchBest}-${weightMin}-${weightMax}-${showFavoritesOnly}-${showWishlistOnly}-${showOwnedOnly}-${showPlannedOnly}-${sortBy}-${sortOrder}-${page}`;
+    }
+
+    _clearUserCache(req) {
+        const prefix = `${req.userId}-`;
+        if (typeof req.cache.clearByPrefix === 'function') {
+            req.cache.clearByPrefix(prefix);
+            return;
+        }
+        req.cache.clear();
     }
 
     /**

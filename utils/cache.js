@@ -47,6 +47,17 @@ class MemoryCache {
     clear() {
         this.cache.clear();
     }
+
+    clearByPrefix(prefix) {
+        let cleanedCount = 0;
+        for (const key of this.cache.keys()) {
+            if (key.startsWith(prefix)) {
+                this.cache.delete(key);
+                cleanedCount++;
+            }
+        }
+        return cleanedCount;
+    }
     
     /**
      * 만료된 캐시 항목 정리

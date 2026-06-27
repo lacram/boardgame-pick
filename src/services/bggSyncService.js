@@ -176,7 +176,6 @@ function parseItem(item) {
         category: categories.join(', '),
         mechanism: mechanisms.join(', '),
         url: item.id ? `https://boardgamegeek.com/boardgame/${item.id}` : null,
-        raw_json: item,
         source_updated_at: nowIso,
         last_detail_sync_at: nowIso,
         detail_sync_status: 'success'
@@ -391,7 +390,6 @@ async function updateRows(rows) {
             'category',
             'mechanism',
             'url',
-            'raw_json',
             'source_updated_at'
         ].join(', '))
         .in('bgg_id', ids);

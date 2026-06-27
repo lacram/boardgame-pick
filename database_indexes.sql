@@ -2,17 +2,15 @@
 -- Supabase SQL Editor에서 실행하세요
 
 -- boardgames 테이블 인덱스
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- 인원수 정규화 컬럼 (원본 보존 + 검색 최적화)
 ALTER TABLE boardgames
-    ADD COLUMN IF NOT EXISTS raw_json jsonb,
     ADD COLUMN IF NOT EXISTS rank int,
-    ADD COLUMN IF NOT EXISTS average_rating numeric,
     ADD COLUMN IF NOT EXISTS last_dump_seen_at timestamptz,
     ADD COLUMN IF NOT EXISTS source_updated_at timestamptz,
     ADD COLUMN IF NOT EXISTS last_detail_sync_at timestamptz,
     ADD COLUMN IF NOT EXISTS detail_sync_status text,
-    ADD COLUMN IF NOT EXISTS my_rating int,
     ADD COLUMN IF NOT EXISTS players_best_raw text,
     ADD COLUMN IF NOT EXISTS players_best_min int,
     ADD COLUMN IF NOT EXISTS players_best_max int,
@@ -20,47 +18,25 @@ ALTER TABLE boardgames
     ADD COLUMN IF NOT EXISTS players_recommended_raw text,
     ADD COLUMN IF NOT EXISTS players_recommended_min int,
     ADD COLUMN IF NOT EXISTS players_recommended_max int,
-    ADD COLUMN IF NOT EXISTS players_recommended_set int[],
-    ADD COLUMN IF NOT EXISTS is_owned boolean DEFAULT false;
+    ADD COLUMN IF NOT EXISTS players_recommended_set int[];
+
+-- raw_json은 과거 원본 payload 보관용 컬럼이었고 현재 앱은 저장하지 않습니다.
+-- 무료 티어 용량 회수 목적이면 아래 DROP COLUMN을 운영 DB에서 별도 실행하세요.
+-- ALTER TABLE boardgames DROP COLUMN IF EXISTS raw_json;
 
 -- 1. weight 컬럼 인덱스 (범위 검색 최적화)
 CREATE INDEX IF NOT EXISTS idx_boardgames_weight ON boardgames(weight);
 
--- 2. is_favorite 컬럼 인덱스 (즐겨찾기 필터링 최적화)
-CREATE INDEX IF NOT EXISTS idx_boardgames_is_favorite ON boardgames(is_favorite);
-
--- 2-1. is_scheduled 컬럼 인덱스 (플레이 예정 필터링 최적화)
-CREATE INDEX IF NOT EXISTS idx_boardgames_is_scheduled ON boardgames(is_scheduled);
-
--- 2-2. is_owned 컬럼 인덱스 (보유 필터링 최적화)
-CREATE INDEX IF NOT EXISTS idx_boardgames_is_owned ON boardgames(is_owned);
-
 -- 3. rating 컬럼 인덱스 (정렬 최적화)
 CREATE INDEX IF NOT EXISTS idx_boardgames_rating ON boardgames(rating DESC);
 
--- 4. name 컬럼 인덱스 (텍스트 검색 최적화)
-CREATE INDEX IF NOT EXISTS idx_boardgames_name ON boardgames USING gin(to_tsvector('english', name));
+-- 4. name/korean_name 부분 문자열 검색 최적화
+-- 앱 쿼리는 ILIKE '%검색어%'를 사용하므로 trigram 인덱스가 실제 쿼리와 맞습니다.
+CREATE INDEX IF NOT EXISTS idx_boardgames_name_trgm
+    ON boardgames USING gin (name gin_trgm_ops);
 
--- 5. korean_name 컬럼 인덱스 (한국어 텍스트 검색 최적화)
-CREATE INDEX IF NOT EXISTS idx_boardgames_korean_name ON boardgames USING gin(to_tsvector('simple', korean_name));
-
--- 6. 복합 인덱스: 즐겨찾기 + 평점 (자주 사용되는 조합)
-CREATE INDEX IF NOT EXISTS idx_boardgames_favorite_rating ON boardgames(is_favorite, rating DESC);
-
--- 7. 복합 인덱스: 즐겨찾기 + 무게 (필터링 + 정렬)
-CREATE INDEX IF NOT EXISTS idx_boardgames_favorite_weight ON boardgames(is_favorite, weight);
-
--- 7-1. 복합 인덱스: 플레이 예정 + 평점 (자주 사용되는 조합)
-CREATE INDEX IF NOT EXISTS idx_boardgames_scheduled_rating ON boardgames(is_scheduled, rating DESC);
-
--- 7-2. 복합 인덱스: 플레이 예정 + 무게 (필터링 + 정렬)
-CREATE INDEX IF NOT EXISTS idx_boardgames_scheduled_weight ON boardgames(is_scheduled, weight);
-
--- 7-3. 복합 인덱스: 보유 + 평점 (자주 사용되는 조합)
-CREATE INDEX IF NOT EXISTS idx_boardgames_owned_rating ON boardgames(is_owned, rating DESC);
-
--- 7-4. 복합 인덱스: 보유 + 무게 (필터링 + 정렬)
-CREATE INDEX IF NOT EXISTS idx_boardgames_owned_weight ON boardgames(is_owned, weight);
+CREATE INDEX IF NOT EXISTS idx_boardgames_korean_name_trgm
+    ON boardgames USING gin (korean_name gin_trgm_ops);
 
 -- 8. players_recommended_set GIN 인덱스 (범위/단일 검색 최적화)
 CREATE INDEX IF NOT EXISTS idx_boardgames_players_recommended_set_gin
@@ -74,10 +50,12 @@ CREATE INDEX IF NOT EXISTS idx_boardgames_players_best_set_gin
 CREATE INDEX IF NOT EXISTS idx_boardgames_rank ON boardgames(rank);
 
 -- 11. average_rating 컬럼 인덱스 (정렬 최적화)
-CREATE INDEX IF NOT EXISTS idx_boardgames_average_rating ON boardgames(average_rating DESC);
+-- average_rating 컬럼은 현재 앱에서 rating으로 통합해 사용합니다.
 
--- 12. 내 평점 컬럼 인덱스 (정렬 최적화)
-CREATE INDEX IF NOT EXISTS idx_boardgames_my_rating ON boardgames(my_rating DESC);
+-- 12. 마지막 상세 동기화 시각 조회 최적화
+CREATE INDEX IF NOT EXISTS idx_boardgames_last_detail_sync_at
+    ON boardgames(last_detail_sync_at DESC)
+    WHERE last_detail_sync_at IS NOT NULL;
 
 -- reviews 테이블 사용자 구분
 ALTER TABLE reviews
@@ -146,100 +124,8 @@ CREATE INDEX IF NOT EXISTS idx_user_data_user_planned
 CREATE INDEX IF NOT EXISTS idx_user_data_user_rating
     ON user_data(user_id, my_rating DESC);
 
--- 내 평점순 정렬 RPC
--- 앱은 이 함수가 있으면 myRating 정렬을 DB 페이지 단위로 처리하고,
--- 함수가 아직 없는 환경에서는 기존 앱 레벨 정렬로 안전하게 fallback합니다.
-CREATE OR REPLACE FUNCTION public.get_boardgames_sorted_by_my_rating(
-    p_user_id text,
-    p_search text DEFAULT '',
-    p_search_players int[] DEFAULT '{}',
-    p_search_best int[] DEFAULT '{}',
-    p_weight_min numeric DEFAULT NULL,
-    p_weight_max numeric DEFAULT NULL,
-    p_show_favorites_only boolean DEFAULT false,
-    p_show_wishlist_only boolean DEFAULT false,
-    p_show_owned_only boolean DEFAULT false,
-    p_show_planned_only boolean DEFAULT false,
-    p_sort_order text DEFAULT 'desc',
-    p_limit int DEFAULT 18,
-    p_offset int DEFAULT 0
-)
-RETURNS TABLE(game jsonb, total_count bigint)
-LANGUAGE sql
-STABLE
-AS $$
-    WITH filtered AS (
-        SELECT
-            b.id,
-            b.name,
-            b.korean_name,
-            b.rating,
-            b.weight,
-            b.players_recommended,
-            b.players_best,
-            b.players_recommended_raw,
-            b.players_best_raw,
-            b.bgg_id,
-            b.main_image_url,
-            b.url,
-            b.play_time_min,
-            b.play_time_max,
-            COALESCE(ud.is_favorite, false) AS is_favorite,
-            COALESCE(ud.is_wishlist, false) AS is_wishlist,
-            COALESCE(ud.is_owned, false) AS is_owned,
-            COALESCE(ud.is_planned, false) AS is_planned,
-            ud.my_rating
-        FROM boardgames b
-        LEFT JOIN user_data ud
-            ON ud.bgg_id = b.bgg_id
-            AND ud.user_id = p_user_id
-        WHERE
-            (
-                COALESCE(NULLIF(trim(p_search), ''), '') = ''
-                OR b.name ILIKE ('%' || p_search || '%')
-                OR b.korean_name ILIKE ('%' || p_search || '%')
-            )
-            AND (
-                COALESCE(array_length(p_search_players, 1), 0) = 0
-                OR b.players_recommended_set && p_search_players
-            )
-            AND (
-                COALESCE(array_length(p_search_best, 1), 0) = 0
-                OR b.players_best_set && p_search_best
-            )
-            AND (p_weight_min IS NULL OR b.weight >= p_weight_min)
-            AND (p_weight_max IS NULL OR b.weight <= p_weight_max)
-            AND (
-                NOT (
-                    p_show_favorites_only
-                    OR p_show_wishlist_only
-                    OR p_show_owned_only
-                    OR p_show_planned_only
-                )
-                OR (p_show_favorites_only AND COALESCE(ud.is_favorite, false))
-                OR (p_show_wishlist_only AND COALESCE(ud.is_wishlist, false))
-                OR (p_show_owned_only AND COALESCE(ud.is_owned, false))
-                OR (p_show_planned_only AND COALESCE(ud.is_planned, false))
-            )
-    ),
-    ranked AS (
-        SELECT
-            filtered.*,
-            COUNT(*) OVER () AS total_count
-        FROM filtered
-        ORDER BY
-            CASE WHEN filtered.my_rating IS NULL THEN 1 ELSE 0 END ASC,
-            CASE WHEN lower(p_sort_order) = 'asc' THEN filtered.my_rating END ASC NULLS LAST,
-            CASE WHEN lower(p_sort_order) <> 'asc' THEN filtered.my_rating END DESC NULLS LAST,
-            filtered.rating DESC NULLS LAST,
-            filtered.name ASC,
-            filtered.bgg_id ASC
-        LIMIT GREATEST(1, LEAST(COALESCE(p_limit, 18), 100))
-        OFFSET GREATEST(0, COALESCE(p_offset, 0))
-    )
-    SELECT to_jsonb(ranked) - 'total_count' AS game, ranked.total_count
-    FROM ranked;
-$$;
+-- 내 평점순 정렬과 사용자 플래그 필터는 user_data 조인 기반 RPC/View로 옮기는 것이
+-- 장기적으로 가장 빠릅니다. 현재 앱은 안전한 앱 레벨 fallback을 사용합니다.
 
 -- BGG 동기화 상태 테이블
 CREATE TABLE IF NOT EXISTS sync_jobs (
