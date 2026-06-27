@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeEventListeners() {
+    initializeSearchSubmitShortcut();
+
     // Favorite buttons
     const favoriteButtons = document.querySelectorAll('.favorite-button');
     favoriteButtons.forEach(button => {
@@ -50,6 +52,22 @@ function initializeEventListeners() {
             const currentOwned = this.getAttribute('data-owned');
             toggleOwned(this, parseInt(rowId), parseInt(currentOwned));
         });
+    });
+}
+
+function initializeSearchSubmitShortcut() {
+    const searchInput = document.querySelector('.search-form input[name="search"]');
+    if (!searchInput || !searchInput.form) return;
+
+    searchInput.addEventListener('keydown', function(event) {
+        if (event.key !== 'Enter') return;
+
+        event.preventDefault();
+        if (typeof searchInput.form.requestSubmit === 'function') {
+            searchInput.form.requestSubmit();
+            return;
+        }
+        searchInput.form.submit();
     });
 }
 
