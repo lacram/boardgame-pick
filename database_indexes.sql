@@ -5,7 +5,6 @@
 
 -- 인원수 정규화 컬럼 (원본 보존 + 검색 최적화)
 ALTER TABLE boardgames
-    ADD COLUMN IF NOT EXISTS raw_json jsonb,
     ADD COLUMN IF NOT EXISTS rank int,
     ADD COLUMN IF NOT EXISTS average_rating numeric,
     ADD COLUMN IF NOT EXISTS last_dump_seen_at timestamptz,
