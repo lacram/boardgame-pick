@@ -137,12 +137,20 @@
                         <h2 class="section-title">추천 게임</h2>
                         <span class="section-subtitle">내 평점/찜 기반</span>
                     </div>
-                    <button type="button"
-                            id="recommendationNextButton"
-                            class="recommendation-next-button"
-                            data-next-page="<%= recommendationNextPage || 1 %>"
-                            data-page-size="3"
-                            aria-label="다음 추천 게임 보기">›</button>
+                    <div class="recommendation-nav" aria-label="추천 게임 이동">
+                        <button type="button"
+                                id="recommendationPrevButton"
+                                class="recommendation-nav-button recommendation-prev-button"
+                                data-prev-page="<%= recommendationPrevPage || 1 %>"
+                                data-page-size="3"
+                                aria-label="이전 추천 게임 보기">‹</button>
+                        <button type="button"
+                                id="recommendationNextButton"
+                                class="recommendation-nav-button recommendation-next-button"
+                                data-next-page="<%= recommendationNextPage || 1 %>"
+                                data-page-size="3"
+                                aria-label="다음 추천 게임 보기">›</button>
+                    </div>
                 </div>
                 <div class="recommendation-strip">
                     <% recommendations.forEach(function(game, index) { %>

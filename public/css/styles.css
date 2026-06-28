@@ -372,7 +372,14 @@ body {
     font-weight: 600;
 }
 
-.recommendation-next-button {
+.recommendation-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.recommendation-nav-button {
     width: 36px;
     height: 36px;
     border: 1px solid rgba(27, 54, 93, 0.14);
@@ -386,14 +393,23 @@ body {
     transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
-.recommendation-next-button:hover,
-.recommendation-next-button:focus-visible {
+.recommendation-nav-button:hover,
+.recommendation-nav-button:focus-visible {
     background: #1B365D;
     color: #ffffff;
+}
+
+.recommendation-prev-button:hover,
+.recommendation-prev-button:focus-visible {
+    transform: translateX(-2px);
+}
+
+.recommendation-next-button:hover,
+.recommendation-next-button:focus-visible {
     transform: translateX(2px);
 }
 
-.recommendation-next-button:disabled {
+.recommendation-nav-button:disabled {
     cursor: wait;
     opacity: 0.6;
     transform: none;

@@ -306,8 +306,10 @@ test('getRecommendationPage paginates ranked recommendations and wraps next page
         assert.equal(firstPage.total, 5);
         assert.equal(firstPage.totalPages, 3);
         assert.equal(firstPage.nextPage, 2);
+        assert.equal(firstPage.prevPage, 3);
         assert.deepEqual(thirdPage.items.map(game => game.bgg_id), [6]);
         assert.equal(thirdPage.nextPage, 1);
+        assert.equal(thirdPage.prevPage, 2);
     } finally {
         recommendationService._supabase = originalClient;
     }

@@ -14,12 +14,14 @@ test('mypage template exposes recommendations tab and pagination links', () => {
     assert.match(template, /recommendationPageUrl/);
 });
 
-test('main page recommendation strip has next button for more recommendations', () => {
+test('main page recommendation strip has previous and next buttons for more recommendations', () => {
     const template = fs.readFileSync(
         path.join(__dirname, '..', 'views', 'index.ejs'),
         'utf8'
     );
 
+    assert.match(template, /id="recommendationPrevButton"/);
+    assert.match(template, /data-prev-page/);
     assert.match(template, /id="recommendationNextButton"/);
     assert.match(template, /data-next-page/);
     assert.match(template, /recommendation-exclude-button/);

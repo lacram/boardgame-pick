@@ -210,6 +210,7 @@ class RecommendationService {
             page: 1,
             pageSize,
             totalPages: 1,
+            prevPage: 1,
             nextPage: 1
         };
     }
@@ -228,6 +229,7 @@ class RecommendationService {
             page,
             pageSize,
             totalPages,
+            prevPage: page <= 1 ? totalPages : page - 1,
             nextPage: page >= totalPages ? 1 : page + 1
         };
     }

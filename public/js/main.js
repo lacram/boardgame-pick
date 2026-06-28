@@ -59,20 +59,29 @@ function initializeEventListeners() {
 }
 
 function initializeRecommendationPager() {
-    const button = document.getElementById('recommendationNextButton');
+    const buttons = document.querySelectorAll('.recommendation-nav-button');
     const strip = document.querySelector('.recommendation-strip');
-    if (!button || !strip) return;
+    if (buttons.length === 0 || !strip) return;
 
-    button.addEventListener('click', async function() {
-        const page = parseInt(button.dataset.nextPage || '1', 10);
+    buttons.forEach(button => {
+        button.addEventListener('click', async function() {
+            const page = parseInt(button.dataset.page || button.dataset.prevPage || button.dataset.nextPage || '1', 10);
+            setRecommendationNavDisabled(true);
+            try {
+                await loadRecommendationPage(page);
+            } catch (error) {
+                console.error('추천 게임 페이지 이동 오류:', error);
+            } finally {
+                setRecommendationNavDisabled(false);
+            }
+        });
+    });
+}
+
+function setRecommendationNavDisabled(disabled) {
+    document.querySelectorAll('.recommendation-nav-button').forEach(button => {
         button.disabled = true;
-        try {
-            await loadRecommendationPage(page);
-        } catch (error) {
-            console.error('추천 게임 페이지 이동 오류:', error);
-        } finally {
-            button.disabled = false;
-        }
+        if (!disabled) button.disabled = false;
     });
 }
 
@@ -120,11 +129,11 @@ function initializeRecommendationExclusion() {
 }
 
 async function loadRecommendationPage(page) {
-    const button = document.getElementById('recommendationNextButton');
+    const nextButton = document.getElementById('recommendationNextButton');
     const strip = document.querySelector('.recommendation-strip');
-    if (!button || !strip) return;
+    if (!nextButton || !strip) return;
 
-    const limit = parseInt(button.dataset.pageSize || '3', 10);
+    const limit = parseInt(nextButton.dataset.pageSize || '3', 10);
     const params = new URLSearchParams({
         page: String(page),
         limit: String(limit)
@@ -139,7 +148,20 @@ async function loadRecommendationPage(page) {
     }
 
     renderRecommendationCards(strip, data.items || []);
-    button.dataset.nextPage = String(data.nextPage || 1);
+    updateRecommendationNav(data);
+}
+
+function updateRecommendationNav(data) {
+    const prevButton = document.getElementById('recommendationPrevButton');
+    const nextButton = document.getElementById('recommendationNextButton');
+    if (prevButton) {
+        prevButton.dataset.page = String(data.prevPage || 1);
+        prevButton.dataset.prevPage = String(data.prevPage || 1);
+    }
+    if (nextButton) {
+        nextButton.dataset.page = String(data.nextPage || 1);
+        nextButton.dataset.nextPage = String(data.nextPage || 1);
+    }
 }
 
 function renderRecommendationCards(strip, games) {

@@ -37,6 +37,7 @@ class GameController {
                 games,
                 recommendations: recommendationResult.recommendations,
                 recommendationEmptyState: recommendationResult.emptyState,
+                recommendationPrevPage: recommendationResult.prevPage,
                 recommendationNextPage: recommendationResult.nextPage,
                 currentPage: searchParams.page,
                 totalPages,
@@ -375,7 +376,7 @@ class GameController {
 
     async _loadRecommendations(params, userId) {
         if (!this._shouldLoadRecommendations(params)) {
-            return { recommendations: [], emptyState: false, nextPage: 1, failed: false };
+            return { recommendations: [], emptyState: false, prevPage: 1, nextPage: 1, failed: false };
         }
 
         try {
@@ -386,12 +387,13 @@ class GameController {
             return {
                 recommendations: recommendationPage.items,
                 emptyState: recommendationPage.items.length === 0,
+                prevPage: recommendationPage.prevPage,
                 nextPage: recommendationPage.nextPage,
                 failed: false
             };
         } catch (error) {
             console.error('추천 게임 조회 오류:', error);
-            return { recommendations: [], emptyState: false, nextPage: 1, failed: true };
+            return { recommendations: [], emptyState: false, prevPage: 1, nextPage: 1, failed: true };
         }
     }
 }
