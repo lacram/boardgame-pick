@@ -406,6 +406,7 @@ body {
 }
 
 .recommendation-card {
+    position: relative;
     display: grid;
     grid-template-columns: 96px minmax(0, 1fr);
     gap: 10px;
@@ -415,7 +416,45 @@ body {
     border-radius: 8px;
     background: #fff;
     color: inherit;
+}
+
+.recommendation-image-link,
+.recommendation-title {
     text-decoration: none;
+}
+
+.recommendation-exclude-button {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 26px;
+    height: 26px;
+    border: 1px solid rgba(27, 54, 93, 0.12);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.94);
+    color: #667085;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    box-shadow: 0 4px 10px rgba(20, 35, 60, 0.12);
+    transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.recommendation-exclude-button:hover,
+.recommendation-exclude-button:focus-visible {
+    background: #1B365D;
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.recommendation-exclude-button:disabled {
+    cursor: wait;
+    opacity: 0.55;
+    transform: none;
 }
 
 .recommendation-image {
@@ -431,6 +470,7 @@ body {
 }
 
 .recommendation-title {
+    display: block;
     color: #1B365D;
     font-weight: 800;
     line-height: 1.25;
@@ -998,16 +1038,22 @@ body {
 
 .mypage-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
 }
 
 .mypage-card {
+    position: relative;
     background: #ffffff;
     border-radius: 12px;
     border: 1px solid rgba(27, 54, 93, 0.08);
     box-shadow: 0 10px 18px rgba(20, 35, 60, 0.06);
     overflow: hidden;
+}
+
+.mypage-recommendation-card .recommendation-exclude-button {
+    top: 8px;
+    right: 8px;
 }
 
 .mypage-image {
@@ -1072,6 +1118,18 @@ body {
     padding: 6px 10px;
     font-size: 12px;
     cursor: pointer;
+}
+
+@media (max-width: 900px) {
+    .mypage-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .mypage-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 @keyframes modalIn {

@@ -532,6 +532,18 @@ class GameService {
         return { isOwned: newOwned };
     }
 
+    async excludeFromRecommendations(userId, bggId) {
+        const { error } = await this._supabase
+            .from('user_data')
+            .upsert([{ user_id: userId, bgg_id: bggId, is_recommendation_excluded: true }], {
+                onConflict: 'user_id,bgg_id'
+            });
+
+        if (error) throw error;
+
+        return { isRecommendationExcluded: true };
+    }
+
     /**
      * 리뷰 추가
      */

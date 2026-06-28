@@ -165,6 +165,29 @@ class GameController {
         }
     }
 
+    async excludeRecommendation(req, res) {
+        try {
+            const { rowId } = req.body;
+
+            if (!rowId) {
+                return res.status(400).json({
+                    error: '게임 ID가 필요합니다.'
+                });
+            }
+
+            const result = await gameService.excludeFromRecommendations(req.userId, rowId);
+
+            this._clearUserCache(req);
+
+            res.json({ success: true, ...result });
+        } catch (error) {
+            console.error('추천 제외 오류:', error);
+            res.status(500).json({
+                error: '추천 게임에서 제외하는 중 오류가 발생했습니다.'
+            });
+        }
+    }
+
     /**
      * 리뷰 추가
      */

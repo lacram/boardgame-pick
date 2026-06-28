@@ -72,8 +72,8 @@ class RecommendationService {
         if (preference.categories.length === 0 && preference.mechanisms.length === 0) {
             return this._emptyPage(pageSize);
         }
-        const ownedIds = await this._getOwnedIds(userId);
-        ownedIds.forEach(id => preference.ownedIds.add(id));
+        const blockedIds = await this._getBlockedRecommendationIds(userId);
+        blockedIds.forEach(id => preference.ownedIds.add(id));
 
         const candidates = await this._getCandidates();
         const filtered = this._filterCandidates(candidates, preference.seedIds, preference.ownedIds);
@@ -122,12 +122,12 @@ class RecommendationService {
             .filter(game => game.userData);
     }
 
-    async _getOwnedIds(userId) {
+    async _getBlockedRecommendationIds(userId) {
         const { data, error } = await this._supabase
             .from('user_data')
-            .select('bgg_id')
+            .select('bgg_id, is_owned, is_recommendation_excluded')
             .eq('user_id', userId)
-            .eq('is_owned', true)
+            .or('is_owned.eq.true,is_recommendation_excluded.eq.true')
             .limit(MAX_CANDIDATES);
 
         if (error) throw error;
@@ -183,9 +183,11 @@ class RecommendationService {
         };
     }
 
-    _filterCandidates(candidates, seedIds, ownedIds) {
+    _filterCandidates(candidates, seedIds, ownedIds, excludedIds = new Set()) {
         return (candidates || []).filter(candidate => {
-            return !seedIds.has(candidate.bgg_id) && !ownedIds.has(candidate.bgg_id);
+            return !seedIds.has(candidate.bgg_id)
+                && !ownedIds.has(candidate.bgg_id)
+                && !excludedIds.has(candidate.bgg_id);
         });
     }
 

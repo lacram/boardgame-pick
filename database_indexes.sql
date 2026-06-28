@@ -103,6 +103,7 @@ CREATE TABLE IF NOT EXISTS user_data (
     is_wishlist boolean DEFAULT false,
     is_owned boolean DEFAULT false,
     is_planned boolean DEFAULT false,
+    is_recommendation_excluded boolean DEFAULT false,
     my_rating int,
     created_at timestamptz DEFAULT now(),
     updated_at timestamptz DEFAULT now()
@@ -111,7 +112,8 @@ CREATE TABLE IF NOT EXISTS user_data (
 -- 기존 테이블 보정 (컬럼 추가)
 ALTER TABLE user_data
     ADD COLUMN IF NOT EXISTS is_wishlist boolean DEFAULT false,
-    ADD COLUMN IF NOT EXISTS is_planned boolean DEFAULT false;
+    ADD COLUMN IF NOT EXISTS is_planned boolean DEFAULT false,
+    ADD COLUMN IF NOT EXISTS is_recommendation_excluded boolean DEFAULT false;
 
 -- 기존 is_scheduled가 있었다면 위시리스트로 이관
 -- UPDATE user_data SET is_wishlist = is_scheduled WHERE is_scheduled = true;
@@ -130,6 +132,9 @@ CREATE INDEX IF NOT EXISTS idx_user_data_user_owned
 
 CREATE INDEX IF NOT EXISTS idx_user_data_user_planned
     ON user_data(user_id, is_planned);
+
+CREATE INDEX IF NOT EXISTS idx_user_data_user_recommendation_excluded
+    ON user_data(user_id, is_recommendation_excluded);
 
 CREATE INDEX IF NOT EXISTS idx_user_data_user_rating
     ON user_data(user_id, my_rating DESC);

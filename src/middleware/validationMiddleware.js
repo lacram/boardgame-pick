@@ -35,6 +35,19 @@ function validateToggleRequest(req, res, next) {
     next();
 }
 
+function validateGameIdRequest(req, res, next) {
+    const validation = GameValidator.validateGameIdRequest(req.body);
+
+    if (!validation.isValid) {
+        return res.status(400).json({
+            error: '잘못된 요청입니다.',
+            details: validation.errors
+        });
+    }
+
+    next();
+}
+
 /**
  * 리뷰 추가 검증 미들웨어
  */
@@ -70,6 +83,7 @@ function validateReviewQuery(req, res, next) {
 module.exports = {
     validateSearchParams,
     validateToggleRequest,
+    validateGameIdRequest,
     validateReviewRequest,
     validateReviewQuery
 };

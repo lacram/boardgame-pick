@@ -22,4 +22,17 @@ test('main page recommendation strip has next button for more recommendations', 
 
     assert.match(template, /id="recommendationNextButton"/);
     assert.match(template, /data-next-page/);
+    assert.match(template, /recommendation-exclude-button/);
+    assert.match(template, /data-rowid="<%= game\.bgg_id %>"/);
+});
+
+test('mypage card grid uses an even three-column desktop layout', () => {
+    const styles = fs.readFileSync(
+        path.join(__dirname, '..', 'public', 'css', 'styles.css'),
+        'utf8'
+    );
+
+    assert.match(styles, /\.mypage-grid\s*{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/s);
+    assert.match(styles, /@media \(max-width: 900px\)[\s\S]*\.mypage-grid\s*{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+    assert.match(styles, /@media \(max-width: 640px\)[\s\S]*\.mypage-grid\s*{[^}]*grid-template-columns:\s*1fr/);
 });

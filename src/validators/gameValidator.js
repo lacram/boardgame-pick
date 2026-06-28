@@ -96,6 +96,21 @@ class GameValidator {
         };
     }
 
+    static validateGameIdRequest(body) {
+        const errors = [];
+
+        if (!body.rowId) {
+            errors.push('게임 ID가 필요합니다.');
+        } else if (!this._isPositiveInteger(body.rowId)) {
+            errors.push('게임 ID는 양의 정수여야 합니다.');
+        }
+
+        return {
+            isValid: errors.length === 0,
+            errors
+        };
+    }
+
     /**
      * 리뷰 추가 검증
      */

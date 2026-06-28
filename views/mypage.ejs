@@ -183,7 +183,11 @@
                 <% } else { %>
                     <div class="mypage-grid">
                         <% recommendations.forEach(function(game) { %>
-                            <div class="mypage-card">
+                            <div class="mypage-card mypage-recommendation-card" data-rowid="<%= game.bgg_id %>">
+                                <button type="button"
+                                        class="recommendation-exclude-button"
+                                        data-rowid="<%= game.bgg_id %>"
+                                        aria-label="추천에서 제외">×</button>
                                 <% if (game.main_image_url) { %>
                                     <img src="<%= game.main_image_url %>" alt="<%= game.displayName %>" class="mypage-image"
                                          loading="lazy" decoding="async" width="300" height="160">

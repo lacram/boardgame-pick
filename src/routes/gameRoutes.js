@@ -6,6 +6,7 @@ const { asyncHandler } = require('../middleware/errorMiddleware');
 const {
     validateSearchParams,
     validateToggleRequest,
+    validateGameIdRequest,
     validateReviewRequest,
     validateReviewQuery
 } = require('../middleware/validationMiddleware');
@@ -49,6 +50,12 @@ router.post('/toggle-planned',
 router.post('/toggle-owned', 
     validateToggleRequest,
     asyncHandler(gameController.toggleOwned.bind(gameController))
+);
+
+// 추천 제외
+router.post('/exclude-recommendation',
+    validateGameIdRequest,
+    asyncHandler(gameController.excludeRecommendation.bind(gameController))
 );
 
 // 리뷰 추가

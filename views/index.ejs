@@ -146,18 +146,24 @@
                 </div>
                 <div class="recommendation-strip">
                     <% recommendations.forEach(function(game, index) { %>
-                        <a href="<%= game.url %>" target="_blank" rel="noopener noreferrer" class="recommendation-card">
+                        <div class="recommendation-card" data-rowid="<%= game.bgg_id %>">
+                            <button type="button"
+                                    class="recommendation-exclude-button"
+                                    data-rowid="<%= game.bgg_id %>"
+                                    aria-label="추천에서 제외">×</button>
                             <% if (game.main_image_url) { %>
-                                <img src="<%= game.main_image_url %>" alt="<%= game.displayName %>"
-                                     class="recommendation-image" loading="<%= index === 0 ? 'eager' : 'lazy' %>"
-                                     decoding="async" width="180" height="120">
+                                <a href="<%= game.url %>" target="_blank" rel="noopener noreferrer" class="recommendation-image-link">
+                                    <img src="<%= game.main_image_url %>" alt="<%= game.displayName %>"
+                                         class="recommendation-image" loading="<%= index === 0 ? 'eager' : 'lazy' %>"
+                                         decoding="async" width="180" height="120">
+                                </a>
                             <% } %>
                             <div class="recommendation-body">
-                                <div class="recommendation-title"><%= game.displayName %></div>
+                                <a href="<%= game.url %>" target="_blank" rel="noopener noreferrer" class="recommendation-title"><%= game.displayName %></a>
                                 <div class="recommendation-meta">🌟 <%= game.rating || 0 %> | 난이도 <%= game.weight || 0 %></div>
                                 <div class="recommendation-reason"><%= game.reason %></div>
                             </div>
-                        </a>
+                        </div>
                     <% }); %>
                 </div>
             </section>

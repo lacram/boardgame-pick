@@ -36,16 +36,17 @@ test('scoreCandidate rewards shared tags and produces a multi-signal Korean reas
     assert.match(scored.reason, /난이도|인원|구성/);
 });
 
-test('filterCandidates excludes owned and seed games', () => {
+test('filterCandidates excludes owned, seed, and recommendation-excluded games', () => {
     const candidates = [
         { bgg_id: 1, name: 'Seed' },
         { bgg_id: 2, name: 'Owned' },
-        { bgg_id: 3, name: 'Fresh' }
+        { bgg_id: 3, name: 'Excluded' },
+        { bgg_id: 4, name: 'Fresh' }
     ];
 
-    const filtered = recommendationService._filterCandidates(candidates, new Set([1]), new Set([2]));
+    const filtered = recommendationService._filterCandidates(candidates, new Set([1]), new Set([2]), new Set([3]));
 
-    assert.deepEqual(filtered.map(game => game.bgg_id), [3]);
+    assert.deepEqual(filtered.map(game => game.bgg_id), [4]);
 });
 
 test('getRecommendations excludes games that are only marked as owned', async () => {
@@ -62,6 +63,7 @@ test('getRecommendations excludes games that are only marked as owned', async ()
                     },
                     or(filter) {
                         this.filter = filter;
+                        this.blockedQuery = filter.includes('is_recommendation_excluded');
                         return this;
                     },
                     order() { return this; },
@@ -139,6 +141,98 @@ test('getRecommendations excludes games that are only marked as owned', async ()
         const recommendations = await recommendationService.getRecommendations('local-user', 3);
         assert.deepEqual(recommendations.map(game => game.bgg_id), [3]);
         assert.deepEqual(calls.filter(table => table === 'user_data').length, 2);
+    } finally {
+        recommendationService._supabase = originalClient;
+    }
+});
+
+test('getRecommendations excludes games hidden from recommendations', async () => {
+    const client = {
+        from(table) {
+            if (table === 'user_data') {
+                return {
+                    select() { return this; },
+                    eq(column, value) {
+                        this.eqColumn = column;
+                        this.eqValue = value;
+                        return this;
+                    },
+                    or(filter) {
+                        this.filter = filter;
+                        this.blockedQuery = filter.includes('is_recommendation_excluded');
+                        return this;
+                    },
+                    order() { return this; },
+                    limit() {
+                        if (this.blockedQuery) {
+                            return Promise.resolve({
+                                data: [{ bgg_id: 2, is_recommendation_excluded: true }],
+                                error: null
+                            });
+                        }
+                        if (this.filter) {
+                            return Promise.resolve({
+                                data: [{ bgg_id: 1, my_rating: 9, is_owned: false }],
+                                error: null
+                            });
+                        }
+                        return Promise.resolve({ data: [], error: null });
+                    }
+                };
+            }
+
+            return {
+                select() { return this; },
+                in() {
+                    return Promise.resolve({
+                        data: [{
+                            bgg_id: 1,
+                            name: 'Seed',
+                            category: 'Card Game',
+                            mechanism: 'Deck, Bag, and Pool Building',
+                            weight: 2,
+                            rating: 7,
+                            players_recommended_set: [2, 3]
+                        }],
+                        error: null
+                    });
+                },
+                gte() { return this; },
+                order() { return this; },
+                limit() {
+                    return Promise.resolve({
+                        data: [
+                            {
+                                bgg_id: 2,
+                                name: 'Hidden',
+                                category: 'Card Game',
+                                mechanism: 'Deck, Bag, and Pool Building',
+                                weight: 2,
+                                rating: 8,
+                                players_recommended_set: [2, 3]
+                            },
+                            {
+                                bgg_id: 3,
+                                name: 'Fresh',
+                                category: 'Card Game',
+                                mechanism: 'Deck, Bag, and Pool Building',
+                                weight: 2,
+                                rating: 8,
+                                players_recommended_set: [2, 3]
+                            }
+                        ],
+                        error: null
+                    });
+                }
+            };
+        }
+    };
+    const originalClient = recommendationService._supabase;
+    recommendationService._supabase = client;
+
+    try {
+        const recommendations = await recommendationService.getRecommendations('local-user', 3);
+        assert.deepEqual(recommendations.map(game => game.bgg_id), [3]);
     } finally {
         recommendationService._supabase = originalClient;
     }

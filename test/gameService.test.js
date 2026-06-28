@@ -114,3 +114,32 @@ test('boardgame query builder carries advanced filters through shared paths', ()
         ['ilike', 'mechanism', '%Worker Placement%']
     ]);
 });
+
+test('excludeFromRecommendations stores a one-way hidden recommendation flag', async () => {
+    const upserts = [];
+    const originalSupabase = gameService._supabase;
+
+    gameService._supabase = {
+        from(table) {
+            assert.equal(table, 'user_data');
+            return {
+                upsert(rows, options) {
+                    upserts.push({ rows, options });
+                    return Promise.resolve({ error: null });
+                }
+            };
+        }
+    };
+
+    try {
+        const result = await gameService.excludeFromRecommendations('local-user', 42);
+
+        assert.deepEqual(result, { isRecommendationExcluded: true });
+        assert.deepEqual(upserts, [{
+            rows: [{ user_id: 'local-user', bgg_id: 42, is_recommendation_excluded: true }],
+            options: { onConflict: 'user_id,bgg_id' }
+        }]);
+    } finally {
+        gameService._supabase = originalSupabase;
+    }
+});
