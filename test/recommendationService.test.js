@@ -143,3 +143,78 @@ test('getRecommendations excludes games that are only marked as owned', async ()
         recommendationService._supabase = originalClient;
     }
 });
+
+test('getRecommendationPage paginates ranked recommendations and wraps next page', async () => {
+    const userRows = [{ bgg_id: 1, my_rating: 9, is_owned: false }];
+    const seedGames = [{
+        bgg_id: 1,
+        name: 'Seed',
+        category: 'Card Game',
+        mechanism: 'Deck, Bag, and Pool Building',
+        weight: 2,
+        rating: 8,
+        players_recommended_set: [2, 3]
+    }];
+    const candidateGames = [2, 3, 4, 5, 6].map(id => ({
+        bgg_id: id,
+        name: `Candidate ${id}`,
+        korean_name: '',
+        category: 'Card Game',
+        mechanism: 'Deck, Bag, and Pool Building',
+        weight: 2,
+        rating: 9 - id / 10,
+        players_recommended_set: [2, 3],
+        url: `https://example.com/${id}`
+    }));
+    const client = {
+        from(table) {
+            if (table === 'user_data') {
+                return {
+                    select() { return this; },
+                    eq(column, value) {
+                        this.eqColumn = column;
+                        this.eqValue = value;
+                        return this;
+                    },
+                    or() {
+                        this.seedQuery = true;
+                        return this;
+                    },
+                    order() { return this; },
+                    limit() {
+                        if (this.seedQuery) return Promise.resolve({ data: userRows, error: null });
+                        return Promise.resolve({ data: [], error: null });
+                    }
+                };
+            }
+
+            return {
+                select() { return this; },
+                in() {
+                    return Promise.resolve({ data: seedGames, error: null });
+                },
+                gte() { return this; },
+                order() { return this; },
+                limit() {
+                    return Promise.resolve({ data: candidateGames, error: null });
+                }
+            };
+        }
+    };
+    const originalClient = recommendationService._supabase;
+    recommendationService._supabase = client;
+
+    try {
+        const firstPage = await recommendationService.getRecommendationPage('local-user', { page: 1, pageSize: 2 });
+        const thirdPage = await recommendationService.getRecommendationPage('local-user', { page: 3, pageSize: 2 });
+
+        assert.deepEqual(firstPage.items.map(game => game.bgg_id), [2, 3]);
+        assert.equal(firstPage.total, 5);
+        assert.equal(firstPage.totalPages, 3);
+        assert.equal(firstPage.nextPage, 2);
+        assert.deepEqual(thirdPage.items.map(game => game.bgg_id), [6]);
+        assert.equal(thirdPage.nextPage, 1);
+    } finally {
+        recommendationService._supabase = originalClient;
+    }
+});

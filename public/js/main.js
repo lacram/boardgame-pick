@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeEventListeners() {
     initializeSearchSubmitShortcut();
     initializeSearchPendingState();
+    initializeRecommendationPager();
 
     // Favorite buttons
     const favoriteButtons = document.querySelectorAll('.favorite-button');
@@ -53,6 +54,83 @@ function initializeEventListeners() {
             const currentOwned = this.getAttribute('data-owned');
             toggleOwned(this, parseInt(rowId), parseInt(currentOwned));
         });
+    });
+}
+
+function initializeRecommendationPager() {
+    const button = document.getElementById('recommendationNextButton');
+    const strip = document.querySelector('.recommendation-strip');
+    if (!button || !strip) return;
+
+    button.addEventListener('click', async function() {
+        const page = parseInt(button.dataset.nextPage || '1', 10);
+        const limit = parseInt(button.dataset.pageSize || '3', 10);
+
+        button.disabled = true;
+        try {
+            const params = new URLSearchParams({
+                page: String(page),
+                limit: String(limit)
+            });
+            const response = await fetch(`/recommendations?${params.toString()}`, {
+                headers: { Accept: 'application/json' }
+            });
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || '추천 게임을 불러오지 못했습니다.');
+            }
+
+            renderRecommendationCards(strip, data.items || []);
+            button.dataset.nextPage = String(data.nextPage || 1);
+        } catch (error) {
+            console.error('추천 게임 페이지 이동 오류:', error);
+        } finally {
+            button.disabled = false;
+        }
+    });
+}
+
+function renderRecommendationCards(strip, games) {
+    strip.textContent = '';
+
+    games.forEach(game => {
+        const card = document.createElement('a');
+        card.href = game.url || '#';
+        card.target = '_blank';
+        card.rel = 'noopener noreferrer';
+        card.className = 'recommendation-card';
+
+        if (game.main_image_url) {
+            const image = document.createElement('img');
+            image.src = game.main_image_url;
+            image.alt = game.displayName || game.name || '추천 게임';
+            image.className = 'recommendation-image';
+            image.loading = 'lazy';
+            image.decoding = 'async';
+            image.width = 180;
+            image.height = 120;
+            card.appendChild(image);
+        }
+
+        const body = document.createElement('div');
+        body.className = 'recommendation-body';
+
+        const title = document.createElement('div');
+        title.className = 'recommendation-title';
+        title.textContent = game.displayName || game.name || '이름 없는 게임';
+
+        const meta = document.createElement('div');
+        meta.className = 'recommendation-meta';
+        meta.textContent = `🌟 ${game.rating || 0} | 난이도 ${game.weight || 0}`;
+
+        const reason = document.createElement('div');
+        reason.className = 'recommendation-reason';
+        reason.textContent = game.reason || '내 취향 데이터와 가까운 게임이에요';
+
+        body.append(title, meta, reason);
+        card.appendChild(body);
+        strip.appendChild(card);
     });
 }
 

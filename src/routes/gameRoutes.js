@@ -63,6 +63,11 @@ router.get('/get-review',
     asyncHandler(gameController.getReview.bind(gameController))
 );
 
+// 추천 게임 페이지
+router.get('/recommendations',
+    asyncHandler(gameController.recommendations.bind(gameController))
+);
+
 // 유저 목록
 router.get('/users', 
     asyncHandler(userController.listUsers.bind(userController))

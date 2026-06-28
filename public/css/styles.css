@@ -347,9 +347,17 @@ body {
 
 .section-heading-row {
     display: flex;
-    align-items: baseline;
+    align-items: center;
+    justify-content: space-between;
     gap: 10px;
     margin-bottom: 10px;
+}
+
+.recommendation-heading-main {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    min-width: 0;
 }
 
 .section-title {
@@ -362,6 +370,33 @@ body {
     color: #667085;
     font-size: 0.86rem;
     font-weight: 600;
+}
+
+.recommendation-next-button {
+    width: 36px;
+    height: 36px;
+    border: 1px solid rgba(27, 54, 93, 0.14);
+    border-radius: 999px;
+    background: #ffffff;
+    color: #1B365D;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(20, 35, 60, 0.08);
+    transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.recommendation-next-button:hover,
+.recommendation-next-button:focus-visible {
+    background: #1B365D;
+    color: #ffffff;
+    transform: translateX(2px);
+}
+
+.recommendation-next-button:disabled {
+    cursor: wait;
+    opacity: 0.6;
+    transform: none;
 }
 
 .recommendation-strip {
@@ -932,6 +967,7 @@ body {
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
+    text-decoration: none;
     transition: background 0.2s ease, color 0.2s ease;
 }
 
@@ -946,6 +982,10 @@ body {
 
 .mypage-panel.active {
     display: block;
+}
+
+.mypage-pagination {
+    margin-top: 18px;
 }
 
 .mypage-empty {

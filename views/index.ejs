@@ -133,8 +133,16 @@
         <% if ((recommendations || []).length > 0) { %>
             <section class="recommendation-section" aria-label="추천 게임">
                 <div class="section-heading-row">
-                    <h2 class="section-title">추천 게임</h2>
-                    <span class="section-subtitle">내 평점/찜 기반</span>
+                    <div class="recommendation-heading-main">
+                        <h2 class="section-title">추천 게임</h2>
+                        <span class="section-subtitle">내 평점/찜 기반</span>
+                    </div>
+                    <button type="button"
+                            id="recommendationNextButton"
+                            class="recommendation-next-button"
+                            data-next-page="<%= recommendationNextPage || 1 %>"
+                            data-page-size="3"
+                            aria-label="다음 추천 게임 보기">›</button>
                 </div>
                 <div class="recommendation-strip">
                     <% recommendations.forEach(function(game, index) { %>

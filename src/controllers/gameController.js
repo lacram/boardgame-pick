@@ -37,6 +37,7 @@ class GameController {
                 games,
                 recommendations: recommendationResult.recommendations,
                 recommendationEmptyState: recommendationResult.emptyState,
+                recommendationNextPage: recommendationResult.nextPage,
                 currentPage: searchParams.page,
                 totalPages,
                 total,
@@ -223,6 +224,25 @@ class GameController {
         }
     }
 
+    async recommendations(req, res) {
+        try {
+            const page = parseInt(req.query.page, 10) || 1;
+            const pageSize = parseInt(req.query.limit, 10) || 3;
+            const result = await recommendationService.getRecommendationPage(req.userId, {
+                page,
+                pageSize
+            });
+
+            res.json({ success: true, ...result });
+        } catch (error) {
+            console.error('추천 게임 페이지 조회 오류:', error);
+            res.status(500).json({
+                success: false,
+                error: '추천 게임을 불러오는 중 오류가 발생했습니다.'
+            });
+        }
+    }
+
     /**
      * 검색 파라미터 파싱
      */
@@ -332,19 +352,23 @@ class GameController {
 
     async _loadRecommendations(params, userId) {
         if (!this._shouldLoadRecommendations(params)) {
-            return { recommendations: [], emptyState: false, failed: false };
+            return { recommendations: [], emptyState: false, nextPage: 1, failed: false };
         }
 
         try {
-            const recommendations = await recommendationService.getRecommendations(userId, 3);
+            const recommendationPage = await recommendationService.getRecommendationPage(userId, {
+                page: 1,
+                pageSize: 3
+            });
             return {
-                recommendations,
-                emptyState: recommendations.length === 0,
+                recommendations: recommendationPage.items,
+                emptyState: recommendationPage.items.length === 0,
+                nextPage: recommendationPage.nextPage,
                 failed: false
             };
         } catch (error) {
             console.error('추천 게임 조회 오류:', error);
-            return { recommendations: [], emptyState: false, failed: true };
+            return { recommendations: [], emptyState: false, nextPage: 1, failed: true };
         }
     }
 }

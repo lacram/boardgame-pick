@@ -49,14 +49,15 @@
 
         <section class="mypage-section">
             <div class="mypage-tabs" role="tablist">
-                <button class="mypage-tab active" role="tab" data-tab="favorites">즐겨찾기</button>
-                <button class="mypage-tab" role="tab" data-tab="wishlist">위시리스트</button>
-                <button class="mypage-tab" role="tab" data-tab="owned">보유중</button>
-                <button class="mypage-tab" role="tab" data-tab="planned">플레이 예정</button>
-                <button class="mypage-tab" role="tab" data-tab="reviews">리뷰</button>
+                <button class="mypage-tab <%= activeTab === 'favorites' ? 'active' : '' %>" role="tab" data-tab="favorites">즐겨찾기</button>
+                <button class="mypage-tab <%= activeTab === 'wishlist' ? 'active' : '' %>" role="tab" data-tab="wishlist">위시리스트</button>
+                <button class="mypage-tab <%= activeTab === 'owned' ? 'active' : '' %>" role="tab" data-tab="owned">보유중</button>
+                <button class="mypage-tab <%= activeTab === 'planned' ? 'active' : '' %>" role="tab" data-tab="planned">플레이 예정</button>
+                <button class="mypage-tab <%= activeTab === 'reviews' ? 'active' : '' %>" role="tab" data-tab="reviews">리뷰</button>
+                <a href="<%= recommendationPageUrl(1) %>" class="mypage-tab <%= activeTab === 'recommendations' ? 'active' : '' %>" role="tab" data-tab="recommendations">추천 게임</a>
             </div>
 
-            <div class="mypage-panel active" data-panel="favorites">
+            <div class="mypage-panel <%= activeTab === 'favorites' ? 'active' : '' %>" data-panel="favorites">
                 <% if (favorites.length === 0) { %>
                     <div class="mypage-empty">아직 즐겨찾기한 게임이 없습니다.</div>
                 <% } else { %>
@@ -80,7 +81,7 @@
                 <% } %>
             </div>
 
-            <div class="mypage-panel" data-panel="wishlist">
+            <div class="mypage-panel <%= activeTab === 'wishlist' ? 'active' : '' %>" data-panel="wishlist">
                 <% if (wishlist.length === 0) { %>
                     <div class="mypage-empty">아직 위시리스트에 담긴 게임이 없습니다.</div>
                 <% } else { %>
@@ -104,7 +105,7 @@
                 <% } %>
             </div>
 
-            <div class="mypage-panel" data-panel="owned">
+            <div class="mypage-panel <%= activeTab === 'owned' ? 'active' : '' %>" data-panel="owned">
                 <% if (owned.length === 0) { %>
                     <div class="mypage-empty">아직 보유중인 게임이 없습니다.</div>
                 <% } else { %>
@@ -128,7 +129,7 @@
                 <% } %>
             </div>
 
-            <div class="mypage-panel" data-panel="planned">
+            <div class="mypage-panel <%= activeTab === 'planned' ? 'active' : '' %>" data-panel="planned">
                 <% if (planned.length === 0) { %>
                     <div class="mypage-empty">아직 플레이 예정으로 저장된 게임이 없습니다.</div>
                 <% } else { %>
@@ -152,7 +153,7 @@
                 <% } %>
             </div>
 
-            <div class="mypage-panel" data-panel="reviews">
+            <div class="mypage-panel <%= activeTab === 'reviews' ? 'active' : '' %>" data-panel="reviews">
                 <% if (reviews.length === 0) { %>
                     <div class="mypage-empty">아직 작성한 리뷰가 없습니다.</div>
                 <% } else { %>
@@ -173,6 +174,42 @@
                             </div>
                         <% }); %>
                     </div>
+                <% } %>
+            </div>
+
+            <div class="mypage-panel <%= activeTab === 'recommendations' ? 'active' : '' %>" data-panel="recommendations">
+                <% if ((recommendations || []).length === 0) { %>
+                    <div class="mypage-empty">추천을 만들려면 게임에 평점을 남기거나 즐겨찾기/위시리스트에 추가해 주세요.</div>
+                <% } else { %>
+                    <div class="mypage-grid">
+                        <% recommendations.forEach(function(game) { %>
+                            <div class="mypage-card">
+                                <% if (game.main_image_url) { %>
+                                    <img src="<%= game.main_image_url %>" alt="<%= game.displayName %>" class="mypage-image"
+                                         loading="lazy" decoding="async" width="300" height="160">
+                                <% } %>
+                                <div class="mypage-content">
+                                    <a href="<%= game.url %>" target="_blank" rel="noopener noreferrer" class="mypage-name"><%= game.displayName %></a>
+                                    <div class="mypage-meta">🌟 <%= game.rating || 0 %> | 난이도 <%= game.weight || 0 %></div>
+                                    <div class="mypage-meta"><%= game.reason %></div>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                    <% if (recommendationTotalPages > 1) { %>
+                        <div class="pagination mypage-pagination">
+                            <% if (recommendationPage > 1) { %>
+                                <a href="<%= recommendationPageUrl(recommendationPage - 1) %>" class="page-button">이전</a>
+                            <% } %>
+                            <% for (let i = Math.max(1, recommendationPage - 2); i <= Math.min(recommendationTotalPages, recommendationPage + 2); i++) { %>
+                                <a href="<%= recommendationPageUrl(i) %>" class="page-button <%= i === recommendationPage ? 'active' : '' %>"><%= i %></a>
+                            <% } %>
+                            <% if (recommendationPage < recommendationTotalPages) { %>
+                                <a href="<%= recommendationPageUrl(recommendationPage + 1) %>" class="page-button">다음</a>
+                            <% } %>
+                        </div>
+                    <% } %>
+                    <div class="stats">추천 게임 <%= recommendationTotal %>개 | <%= recommendationPage %> / <%= recommendationTotalPages %> 페이지</div>
                 <% } %>
             </div>
         </section>

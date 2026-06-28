@@ -4,6 +4,7 @@ const { parsePlayersToSet } = require('../../utils/searchUtils');
 const MAX_SEEDS = 30;
 const MAX_TOKENS = 5;
 const MAX_CANDIDATES = 300;
+const MAX_PAGE_SIZE = 30;
 const MIN_CANDIDATE_RATING = 5;
 
 const TOKEN_LABELS = {
@@ -58,12 +59,18 @@ class RecommendationService {
     }
 
     async getRecommendations(userId, limit = 3) {
+        const page = await this.getRecommendationPage(userId, { page: 1, pageSize: limit });
+        return page.items;
+    }
+
+    async getRecommendationPage(userId, options = {}) {
+        const pageSize = this._normalizePageSize(options.pageSize || options.limit || 3);
         const seeds = await this._getPreferenceSeeds(userId);
-        if (seeds.length === 0) return [];
+        if (seeds.length === 0) return this._emptyPage(pageSize);
 
         const preference = this._buildPreferenceProfile(seeds);
         if (preference.categories.length === 0 && preference.mechanisms.length === 0) {
-            return [];
+            return this._emptyPage(pageSize);
         }
         const ownedIds = await this._getOwnedIds(userId);
         ownedIds.forEach(id => preference.ownedIds.add(id));
@@ -71,19 +78,20 @@ class RecommendationService {
         const candidates = await this._getCandidates();
         const filtered = this._filterCandidates(candidates, preference.seedIds, preference.ownedIds);
 
-        return filtered
+        const ranked = filtered
             .map(candidate => this._scoreCandidate(candidate, preference))
             .filter(candidate => candidate.score > 0)
             .sort((a, b) => {
                 if (b.score === a.score) return (b.rating || 0) - (a.rating || 0);
                 return b.score - a.score;
             })
-            .slice(0, limit)
             .map(candidate => ({
                 ...candidate,
                 displayName: candidate.korean_name || candidate.name,
                 myRating: null
             }));
+
+        return this._paginateRecommendations(ranked, options.page, pageSize);
     }
 
     async _getPreferenceSeeds(userId) {
@@ -179,6 +187,47 @@ class RecommendationService {
         return (candidates || []).filter(candidate => {
             return !seedIds.has(candidate.bgg_id) && !ownedIds.has(candidate.bgg_id);
         });
+    }
+
+    _normalizePageSize(value) {
+        const pageSize = parseInt(value, 10);
+        if (!Number.isFinite(pageSize) || pageSize < 1) return 3;
+        return Math.min(pageSize, MAX_PAGE_SIZE);
+    }
+
+    _normalizePage(value, totalPages) {
+        const page = parseInt(value, 10);
+        if (!Number.isFinite(page) || page < 1) return 1;
+        return ((page - 1) % totalPages) + 1;
+    }
+
+    _emptyPage(pageSize) {
+        return {
+            items: [],
+            total: 0,
+            page: 1,
+            pageSize,
+            totalPages: 1,
+            nextPage: 1
+        };
+    }
+
+    _paginateRecommendations(items, requestedPage, pageSize) {
+        const total = items.length;
+        if (total === 0) return this._emptyPage(pageSize);
+
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        const page = this._normalizePage(requestedPage, totalPages);
+        const start = (page - 1) * pageSize;
+
+        return {
+            items: items.slice(start, start + pageSize),
+            total,
+            page,
+            pageSize,
+            totalPages,
+            nextPage: page >= totalPages ? 1 : page + 1
+        };
     }
 
     _scoreCandidate(candidate, preference) {
